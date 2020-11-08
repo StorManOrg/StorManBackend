@@ -4,7 +4,11 @@ from pydantic import BaseModel
 import string
 import random
 
-app = FastAPI()
+app = FastAPI(
+    title="StoRe API",
+    description="Storage Reloaded Backend (written in Python w/ FastAPI)",
+    version="0.1.0"
+)
 
 class Property(BaseModel):
     id: int
@@ -29,7 +33,7 @@ class Item(BaseModel):
 
 @app.get("/")
 def root():
-    return {"version": "0.1.0"}
+    return {"version": app.version}
 
 @app.get("/auth")
 def login(username: str, password: str):
