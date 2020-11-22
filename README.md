@@ -1,4 +1,4 @@
-# Backend
+# StoRe Server
 WIP
 
 ## Usage
@@ -16,3 +16,5 @@ For **Debian** based distros, install `python3` and then run `pip install -r req
 2. Open a terminal and go to the project folder
 3. Run `uvicorn main:app --reload` to start the server
 3. Go to http://127.0.0.1:8000/docs (also try: http://127.0.0.1:8000/redoc)
+
+## Changelog
