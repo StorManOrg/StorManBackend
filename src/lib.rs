@@ -75,7 +75,7 @@ pub mod storage_reloaded {
                 value,
                 display_type,
                 min,
-                max
+                max,
             }
         }
     }
