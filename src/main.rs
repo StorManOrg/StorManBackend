@@ -1,47 +1,25 @@
 use actix_files::Files;
-use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{get, App, HttpRequest, HttpServer, Result};
 
-/// simple handle
-async fn index(req: HttpRequest) -> Result<HttpResponse, Error> {
-    println!("{:?}", req);
-    Ok(HttpResponse::Ok()
-        .content_type("text/plain")
-        .body("Welcome!"))
+#[get("/api/item/{item_id}")]
+async fn get_item(req: HttpRequest) -> Result<String> {
+    let item_id: u32 = req
+        .match_info()
+        .query("item_id")
+        .parse()
+        .expect("Not a number");
+
+    Ok(format!("You requested item id {}!", item_id))
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=debug");
-    env_logger::init();
-
-    println!("Started http server: 127.0.0.1:8443");
-
-    /*
-    // load ssl keys
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file("key.pem", SslFiletype::PEM)
-        .unwrap();
-    builder.set_certificate_chain_file("cert.pem").unwrap();
-    */
-
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
-            // enable logger
-            .wrap(middleware::Logger::default())
-            // register static files
+            .service(get_item)
             .service(Files::new("/", "./static"))
-            // register simple handler, handle all methods
-            .service(web::resource("/index.html").to(index))
-            // with path parameters
-            .service(web::resource("/").route(web::get().to(|| {
-                HttpResponse::Found()
-                    .header("LOCATION", "/index.html")
-                    .finish()
-            })))
     })
-    //.bind_openssl("127.0.0.1:8443", builder)?
-    .bind(format!("127.0.0.1:{}", 8443))?
+    .bind("127.0.0.1:8080")?
     .run()
     .await
 }
