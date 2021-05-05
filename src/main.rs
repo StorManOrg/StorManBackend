@@ -30,6 +30,7 @@ async fn get_item(req: HttpRequest) -> Result<web::Json<models::Item>> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    println!("Starting server on http://127.0.0.1:8080");
     HttpServer::new(move || {
         App::new()
             .service(web::scope("/api").service(get_item))
