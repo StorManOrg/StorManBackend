@@ -3,26 +3,26 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Item {
-    id: Option<u64>,
-    name: String,
-    description: String,
-    image: String,
-    location: u64,
-    tags: Vec<u64>,
-    amount: u64,
-    properties_internal: Vec<Property>,
-    properties_custom: Vec<Property>,
-    attachments: HashMap<String, String>,
-    last_edited: u64,
-    created: u64,
+    pub id: Option<u64>,
+    pub name: String,
+    pub description: String,
+    pub image: String,
+    pub location: u64,
+    pub tags: Vec<u64>,
+    pub amount: u64,
+    pub properties_internal: Vec<Property>,
+    pub properties_custom: Vec<Property>,
+    pub attachments: HashMap<String, String>,
+    pub last_edited: u64,
+    pub created: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Property {
-    id: u64,
-    name: String,
-    value: String,
-    display_type: Option<String>,
-    min: Option<u64>,
-    max: Option<u64>,
+    pub id: u64,
+    pub name: String,
+    pub value: String,
+    pub display_type: Option<String>,
+    pub min: Option<u64>,
+    pub max: Option<u64>,
 }
