@@ -34,8 +34,11 @@ async fn main() -> std::io::Result<()> {
     // Load user preferences from config file and environment
     let mut settings = config::Config::default();
     settings
-        .merge(config::File::with_name("config").required(false)).unwrap()
-        .merge(config::Environment::with_prefix("APP")).unwrap();
+        .merge(config::File::with_name("config").required(false))
+        .unwrap();
+    settings
+        .merge(config::Environment::with_prefix("APP"))
+        .unwrap();
 
     // Get port from config, or use the default: 8081
     let port: i64 = settings.get_int("port").unwrap_or(8081);
