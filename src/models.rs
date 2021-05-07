@@ -26,3 +26,24 @@ pub struct Property {
     pub min: Option<u64>,
     pub max: Option<u64>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Tag {
+    pub id: u64,
+    pub name: String,
+    pub color: u32,
+    pub icon: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Location {
+    pub id: u64,
+    pub name: String,
+    pub datbase: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Database {
+    pub id: u64,
+    pub name: String,
+}
