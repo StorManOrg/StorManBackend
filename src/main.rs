@@ -56,7 +56,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api")
                     .service(web_handler::get_system_info)
-                    .service(web::scope("v1").service(get_item)),
+                    .service(web::scope("/v1").service(get_item)),
             )
             .service(
                 Files::new("/", "./static")
