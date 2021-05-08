@@ -5,6 +5,8 @@ use std::collections::HashMap;
 mod models;
 use models::Item;
 
+mod web_handler;
+
 #[get("/item/{item_id}")]
 async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
     let item_id: u64 = req
@@ -51,7 +53,11 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on http://127.0.0.1:{}", port);
     HttpServer::new(move || {
         App::new()
-            .service(web::scope("/api").service(get_item))
+            .service(
+                web::scope("/api")
+                    .service(web_handler::get_system_info)
+                    .service(web::scope("v1").service(get_item)),
+            )
             .service(
                 Files::new("/", "./static")
                     .prefer_utf8(true)
