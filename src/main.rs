@@ -43,7 +43,7 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
 
     // Get port and host from config, or use the default port and host: 0.0.0.0:8081
-    let host: String = settings.get_str("host").unwrap_or(String::from("0.0.0.0"));
+    let host: String = settings.get_str("host").unwrap_or_else(|_| String::from("0.0.0.0"));
 
     let port: i64 = settings.get_int("port").unwrap_or(8081);
     let port: u16 = if port > (std::u16::MAX as i64) {
