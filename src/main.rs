@@ -42,7 +42,9 @@ async fn main() -> std::io::Result<()> {
         .merge(config::Environment::with_prefix("APP"))
         .unwrap();
 
-    // Get port from config, or use the default: 8081
+    // Get port and host from config, or use the default port and host: 0.0.0.0:8081
+    let host: String = settings.get_str("host").unwrap_or(String::from("0.0.0.0"));
+
     let port: i64 = settings.get_int("port").unwrap_or(8081);
     let port: u16 = if port > (std::u16::MAX as i64) {
         panic!("Port number dosn't fit into an u16!");
@@ -50,7 +52,12 @@ async fn main() -> std::io::Result<()> {
         port as u16
     };
 
-    println!("Starting server on http://127.0.0.1:{}", port);
+    println!(
+        "Starting server on http://{host}:{port}",
+        host = host,
+        port = port
+    );
+
     HttpServer::new(move || {
         App::new()
             .service(
@@ -64,7 +71,7 @@ async fn main() -> std::io::Result<()> {
                     .index_file("index.html"),
             )
     })
-    .bind(("127.0.0.1", port))?
+    .bind((host, port))?
     .run()
     .await
 }
