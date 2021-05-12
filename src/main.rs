@@ -48,9 +48,9 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .service(web::scope("/api")
-            	.service(web_handler::get_system_info)
-            	.service(web::scope("/v1")
-            		.service(get_item)))
+                .service(web_handler::get_system_info)
+                .service(web::scope("/v1")
+                    .service(get_item)))
             .service(Files::new("/", "./static").prefer_utf8(true).index_file("index.html"))
     })
     .bind((host, port))?
