@@ -1,5 +1,5 @@
 [package]
-name    = "storage_reloaded"
+name    = "storagereloaded"
 version = "0.2.0"
 authors = ["Sematre <Sematre@gmx.de>"]
 edition = "2018"
