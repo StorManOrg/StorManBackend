@@ -44,6 +44,7 @@ async fn main() -> std::io::Result<()> {
     };
 
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
+    let index_file: String = settings.get_str("index_file").unwrap_or_else(|_| String::from("index.html"));
 
     println!("Starting server on http://{host}:{port}", host = host, port = port);
     HttpServer::new(move || {
@@ -53,7 +54,7 @@ async fn main() -> std::io::Result<()> {
                     .service(web_handler::get_system_info)
                     .service(web::scope("/v1")
                         .service(get_item)))
-                .service(Files::new("/", "./static").prefer_utf8(true).index_file("index.html"))
+                .service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
         } else {
             App::new()
                 .service(web::scope("/")
