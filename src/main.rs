@@ -1,31 +1,8 @@
 use actix_files::Files;
-use actix_web::{get, web, App, HttpRequest, HttpServer, Result};
-use std::collections::HashMap;
+use actix_web::{web, App, HttpServer};
 
 mod models;
-use models::Item;
-
 mod web_handler;
-
-#[get("/item/{item_id}")]
-async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
-    let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
-
-    Ok(web::Json(Item {
-        id: Some(item_id),
-        name: String::from("Test Item 3"),
-        description: String::from("Sample Description"),
-        image: String::from("fejfeifji"),
-        location: 5,
-        tags: vec![6, 3],
-        amount: 29,
-        properties_internal: vec![],
-        properties_custom: vec![],
-        attachments: HashMap::new(),
-        last_edited: 637463746,
-        created: 989343,
-    }))
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -53,14 +30,14 @@ async fn main() -> std::io::Result<()> {
                 .service(web::scope("/api")
                     .service(web_handler::get_system_info)
                     .service(web::scope("/v1")
-                        .service(get_item)))
+                        .service(web_handler::get_item)))
                 .service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
         } else {
             App::new()
                 .service(web::scope("/")
                     .service(web_handler::get_system_info)
                     .service(web::scope("/v1")
-                        .service(get_item)))
+                        .service(web_handler::get_item)))
         }
     })
     .bind((host, port))?
