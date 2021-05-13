@@ -36,7 +36,6 @@ async fn main() -> std::io::Result<()> {
 
     // Get port and host from config, or use the default port and host: 0.0.0.0:8081
     let host: String = settings.get_str("host").unwrap_or_else(|_| String::from("0.0.0.0"));
-
     let port: i64 = settings.get_int("port").unwrap_or(8081);
     let port: u16 = if port > (std::u16::MAX as i64) {
         panic!("Port number dosn't fit into an u16!");
@@ -44,14 +43,24 @@ async fn main() -> std::io::Result<()> {
         port as u16
     };
 
+    let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
+
     println!("Starting server on http://{host}:{port}", host = host, port = port);
     HttpServer::new(move || {
-        App::new()
-            .service(web::scope("/api")
-                .service(web_handler::get_system_info)
-                .service(web::scope("/v1")
-                    .service(get_item)))
-            .service(Files::new("/", "./static").prefer_utf8(true).index_file("index.html"))
+        if static_serving {
+            App::new()
+                .service(web::scope("/api")
+                    .service(web_handler::get_system_info)
+                    .service(web::scope("/v1")
+                        .service(get_item)))
+                .service(Files::new("/", "./static").prefer_utf8(true).index_file("index.html"))
+        } else {
+            App::new()
+                .service(web::scope("/")
+                    .service(web_handler::get_system_info)
+                    .service(web::scope("/v1")
+                        .service(get_item)))
+        }
     })
     .bind((host, port))?
     .run()
