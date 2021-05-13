@@ -1,8 +1,12 @@
 [package]
-name = "storage_reloaded"
+name    = "storage_reloaded"
 version = "0.2.0"
 authors = ["Sematre <Sematre@gmx.de>"]
 edition = "2018"
+homepage   = "https://github.com/StorageReloaded/StoRe"
+repository = "https://github.com/StorageReloaded/Server"
+license    = "GLP-3.0"
+keywords   = ["server", "api", "storage", "management"]
 
 [dependencies]
 actix-web   = { version = "3" }
