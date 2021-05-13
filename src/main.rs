@@ -30,14 +30,18 @@ async fn main() -> std::io::Result<()> {
                 .service(web::scope("/api")
                     .service(web_handler::get_system_info)
                     .service(web::scope("/v1")
-                        .service(web_handler::get_item)))
+                        .service(web_handler::get_items)
+                        .service(web_handler::get_item)
+                        .service(web_handler::get_tags)))
                 .service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
         } else {
             App::new()
                 .service(web::scope("/")
                     .service(web_handler::get_system_info)
                     .service(web::scope("/v1")
-                        .service(web_handler::get_item)))
+                        .service(web_handler::get_items)
+                        .service(web_handler::get_item)
+                        .service(web_handler::get_tags)))
         }
     })
     .bind((host, port))?
