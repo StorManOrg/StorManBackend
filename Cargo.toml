@@ -3,6 +3,7 @@ name    = "storagereloaded"
 version = "0.2.0"
 authors = ["Sematre <Sematre@gmx.de>"]
 edition = "2018"
+description = "Simple self-hosted/all-in-one storage management system"
 homepage   = "https://github.com/StorageReloaded/StoRe"
 repository = "https://github.com/StorageReloaded/Server"
 license    = "GLP-3.0"
@@ -15,3 +16,7 @@ serde       = { version = "1.0", features = ["derive"] }
 serde_json  = "1.0"
 sysinfo     = "0.17"
 config      = "0.11"
+
+[package.metadata.deb]
+maintainer-scripts = "debian/"
+systemd-units = { enable = false }

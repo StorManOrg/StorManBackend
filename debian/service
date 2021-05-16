@@ -1,0 +1,8 @@
+[Unit]
+Description=StorageReloaded
+
+[Service]
+ExecStart=/usr/bin/storagereloaded
+
+[Install]
+WantedBy=multi-user.target
