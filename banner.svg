@@ -1,0 +1,11 @@
+<svg width="116.42" height="48" version="1.1" viewBox="0 0 116.42 48" xmlns="http://www.w3.org/2000/svg">
+<rect width="48" height="48" ry="24" fill="#2d3e50" style="paint-order:stroke fill markers"/>
+<ellipse cx="24" cy="18.172" rx="7.4999" ry="2.4971" fill="none" stroke="#47c8b9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+<path d="m31.5 23.998c0 1.3817-3.3333 2.4971-7.4999 2.4971-4.1666 0-7.4999-1.1154-7.4999-2.4971" fill="none" stroke="#47c8b9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+<path d="m16.5 18.172v11.653c0 1.3817 3.3333 2.4971 7.4999 2.4971 4.1666 0 7.4999-1.1154 7.4999-2.4971v-11.653" fill="none" stroke="#47c8b9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+<path d="m7.9557 18.532a16.953 16.927 0 0 1 16.044-11.459 16.953 16.927 0 0 1 16.044 11.459" fill="none" stroke="#47c8b9" stroke-dashoffset="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="paint-order:markers stroke fill"/>
+<path d="m40.044 29.467a16.953 16.927 0 0 1-16.044 11.459 16.953 16.927 0 0 1-16.044-11.457" fill="none" stroke="#47c8b9" stroke-dashoffset="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="paint-order:markers stroke fill"/>
+<path d="m35.498 30.961 4.5459-1.4936 1.5225 4.4594" fill="none" stroke="#47c8b9" stroke-dashoffset="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="paint-order:stroke fill markers"/>
+<path d="m12.502 17.037-4.5459 1.4936-1.5225-4.4594" fill="none" stroke="#47c8b9" stroke-dashoffset="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="paint-order:stroke fill markers"/>
+<text x="55.056637" y="18.482744" fill="#2d3e50" font-family="Nunito" font-size="20.284px" font-weight="bold" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;line-height:1.25" xml:space="preserve"><tspan x="55.056637" y="18.482744" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">StoRe</tspan><tspan x="55.056637" y="43.837746" style="font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal">Server</tspan></text>
+</svg>
