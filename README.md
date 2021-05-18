@@ -31,7 +31,7 @@ Workspace:
 |
 [:globe_with_meridians: Web](https://github.com/StorageReloaded/Web)
 |
-[:cloud: Server](https://github.com/StorageReloaded/Server)
+[:iphone: Android](https://github.com/StorageReloaded/Android)
 
 ## License
 Distributed under the **GPL-3.0 License**. See ``LICENSE`` for more information
