@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Item {
     pub id: u64,
     pub name: String,
@@ -17,7 +17,7 @@ pub struct Item {
     pub created: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Property {
     pub id: u64,
     pub name: String,
@@ -27,7 +27,7 @@ pub struct Property {
     pub max: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tag {
     pub id: u64,
     pub name: String,
@@ -35,14 +35,14 @@ pub struct Tag {
     pub icon: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Location {
     pub id: u64,
     pub name: String,
     pub datbase: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Database {
     pub id: u64,
     pub name: String,

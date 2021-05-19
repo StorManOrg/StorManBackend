@@ -25,6 +25,7 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on http://{host}:{port}", host = host, port = port);
     HttpServer::new(move || {
+        // Check if the user wants to serve static files (in addition to the api)
         if static_serving {
             App::new()
                 .service(web::scope("/api")
@@ -32,7 +33,10 @@ async fn main() -> std::io::Result<()> {
                     .service(web::scope("/v1")
                         .service(web_handler::get_items)
                         .service(web_handler::get_item)
-                        .service(web_handler::get_tags)))
+                        .service(web_handler::get_tags)
+                        .service(web_handler::get_tag)
+                    )
+                )
                 .service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
         } else {
             App::new()
@@ -41,7 +45,10 @@ async fn main() -> std::io::Result<()> {
                     .service(web::scope("/v1")
                         .service(web_handler::get_items)
                         .service(web_handler::get_item)
-                        .service(web_handler::get_tags)))
+                        .service(web_handler::get_tags)
+                        .service(web_handler::get_tag)
+                    )
+                )
         }
     })
     .bind((host, port))?
