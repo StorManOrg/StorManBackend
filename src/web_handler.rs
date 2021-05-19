@@ -1,22 +1,13 @@
 use actix_web::{error, get, web, HttpRequest, Result};
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
+use std::collections::HashMap;
 use sysinfo::SystemExt;
 
 use crate::models::{Item, Property, Tag};
 
-macro_rules! collection {
-    // map-like
-    ($($k:expr => $v:expr),* $(,)?) => {
-        std::iter::Iterator::collect(std::array::IntoIter::new([$(($k, $v),)*]))
-    };
-    // set-like
-    ($($v:expr),* $(,)?) => {
-        std::iter::Iterator::collect(std::array::IntoIter::new([$($v,)*]))
-    };
-}
+use crate::collection;
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref ITEM_MAP: HashMap<u64, Item> = collection! {

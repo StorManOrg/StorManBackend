@@ -1,12 +1,14 @@
 use actix_files::Files;
 use actix_web::{web, App, HttpServer};
 
+mod macros;
 mod models;
 mod web_handler;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Load user preferences from config file and environment
+    // Load user preferences from config file and environment.
+    // Environment variables override the config file!
     let mut settings = config::Config::default();
     settings.merge(config::File::with_name("config").required(false)).unwrap();
     settings.merge(config::Environment::with_prefix("APP")).unwrap();
