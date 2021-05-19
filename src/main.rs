@@ -25,30 +25,26 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on http://{host}:{port}", host = host, port = port);
     HttpServer::new(move || {
-        // Check if the user wants to serve static files (in addition to the api)
+        // Create a new App that handles all client requests
+        let app = App::new()
+            // If the user wants to serve static files (in addition to the api),
+            // move the api to a sub layer: '/' => '/api'
+            .service(web::scope(if static_serving { "/api" } else { "/" })
+                .service(web_handler::get_system_info)
+                .service(web::scope("/v1")
+                    .service(web_handler::get_items)
+                    .service(web_handler::get_item)
+                    .service(web_handler::get_tags)
+                    .service(web_handler::get_tag)
+                )
+        );
+
+        // After registering the api services, register the static file service.
+        // If the user dosn't need static serving, this step will be skipped
         if static_serving {
-            App::new()
-                .service(web::scope("/api")
-                    .service(web_handler::get_system_info)
-                    .service(web::scope("/v1")
-                        .service(web_handler::get_items)
-                        .service(web_handler::get_item)
-                        .service(web_handler::get_tags)
-                        .service(web_handler::get_tag)
-                    )
-                )
-                .service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
+            app.service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
         } else {
-            App::new()
-                .service(web::scope("/")
-                    .service(web_handler::get_system_info)
-                    .service(web::scope("/v1")
-                        .service(web_handler::get_items)
-                        .service(web_handler::get_item)
-                        .service(web_handler::get_tags)
-                        .service(web_handler::get_tag)
-                    )
-                )
+            app
         }
     })
     .bind((host, port))?
