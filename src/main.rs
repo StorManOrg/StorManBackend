@@ -44,7 +44,9 @@ async fn main() -> std::io::Result<()> {
                 .service(web::scope("/v1")
                     .service(web_handler::get_items)
                     .service(web_handler::get_item)
+                    .service(web_handler::create_item)
                     .service(web_handler::get_tags)
+                    .service(web_handler::create_tag)
                     .service(web_handler::get_tag)
                 )
         );

@@ -1,4 +1,4 @@
-use actix_web::{error, get, web, HttpRequest, Result};
+use actix_web::{error, get, put, web, HttpRequest, HttpResponse, Result};
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -72,13 +72,13 @@ lazy_static! {
             id: 1,
             name: String::from("test-tag"),
             color: 345156,
-            icon: 24,
+            icon: Some(24),
         },
         2 => Tag {
             id: 2,
             name: String::from("foo-tag"),
             color: 78354,
-            icon: 23,
+            icon: Some(23),
         }
     });
 }
@@ -98,6 +98,29 @@ async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
     }
 }
 
+#[put("/item")]
+async fn create_item(mut item: web::Json<Item>) -> Result<HttpResponse> {
+    if item.id != 0 {
+        return Err(error::ErrorBadRequest("Item id must be 0!"));
+    }
+
+    // Check if the tags exist
+    if !item.tags.iter().all(|&tag_id| TAG_MAP.lock().unwrap().contains_key(&tag_id)) {
+        return Err(error::ErrorNotFound("Unknown tag id!"));
+    }
+
+    // Generate a new random id
+    item.id = rand::random();
+    while ITEM_MAP.lock().unwrap().contains_key(&item.id) {
+        item.id = rand::random::<u16>() as u64;
+    }
+
+    ITEM_MAP.lock().unwrap().insert(item.id, item.clone());
+    Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
+        "item_id" => item.id
+    }))
+}
+
 #[get("/tags")]
 async fn get_tags() -> Result<web::Json<Vec<Tag>>> {
     Ok(web::Json(TAG_MAP.lock().unwrap().values().cloned().collect()))
@@ -111,6 +134,29 @@ async fn get_tag(req: HttpRequest) -> Result<web::Json<Tag>> {
     } else {
         Err(error::ErrorNotFound("Tag not found!"))
     }
+}
+
+#[put("/tag")]
+async fn create_tag(mut tag: web::Json<Tag>) -> Result<HttpResponse> {
+    if tag.id != 0 {
+        return Err(error::ErrorBadRequest("Tag id must be 0!"));
+    }
+
+    // Check if the tag name is unique
+    if TAG_MAP.lock().unwrap().values().any(|map_tag| map_tag.name == tag.name) {
+        return Err(error::ErrorNotFound("Tag name already exists!"));
+    }
+
+    // Generate a new random id
+    tag.id = rand::random();
+    while ITEM_MAP.lock().unwrap().contains_key(&tag.id) {
+        tag.id = rand::random::<u16>() as u64;
+    }
+
+    TAG_MAP.lock().unwrap().insert(tag.id, tag.clone());
+    Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
+        "tag_id" => tag.id
+    }))
 }
 
 #[derive(Serialize, Deserialize, Debug)]

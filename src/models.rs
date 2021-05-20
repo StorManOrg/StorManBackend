@@ -32,7 +32,7 @@ pub struct Tag {
     pub id: u64,
     pub name: String,
     pub color: u32,
-    pub icon: u64,
+    pub icon: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
