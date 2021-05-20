@@ -1,5 +1,6 @@
 use actix_files::Files;
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpServer};
+use log::info;
 
 mod macros;
 mod models;
@@ -7,6 +8,10 @@ mod web_handler;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    std::env::set_var("RUST_LOG", "info");
+    std::env::set_var("RUST_BACKTRACE", "1");
+    env_logger::init();
+
     // Load user preferences from config file and environment.
     // Environment variables override the config file!
     let mut settings = config::Config::default();
@@ -27,8 +32,12 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on http://{host}:{port}", host = host, port = port);
     HttpServer::new(move || {
+        // Create a simple logger that writes all incomming requests to the console
+        let logger = Logger::default();
+
         // Create a new App that handles all client requests
         let app = App::new()
+            .wrap(logger)
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
