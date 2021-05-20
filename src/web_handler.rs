@@ -8,9 +8,10 @@ use crate::models::{Item, Property, Tag};
 
 use crate::collection;
 use lazy_static::lazy_static;
+use std::sync::Mutex;
 
 lazy_static! {
-    static ref ITEM_MAP: HashMap<u64, Item> = collection! {
+    static ref ITEM_MAP: Mutex<HashMap<u64, Item>> = Mutex::new(collection! {
         1 => Item {
             id: 1,
             name: String::from("TestItem"),
@@ -65,8 +66,8 @@ lazy_static! {
             last_edited: 637463746,
             created: 989343,
         }
-    };
-    static ref TAG_MAP: HashMap<u64, Tag> = collection! {
+    });
+    static ref TAG_MAP: Mutex<HashMap<u64, Tag>> = Mutex::new(collection! {
         1 => Tag {
             id: 1,
             name: String::from("test-tag"),
@@ -79,18 +80,18 @@ lazy_static! {
             color: 78354,
             icon: 23,
         }
-    };
+    });
 }
 
 #[get("/items")]
 async fn get_items() -> Result<web::Json<Vec<Item>>> {
-    Ok(web::Json(ITEM_MAP.values().cloned().collect()))
+    Ok(web::Json(ITEM_MAP.lock().unwrap().values().cloned().collect()))
 }
 
 #[get("/item/{item_id}")]
 async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
     let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
-    if let Some(item) = ITEM_MAP.get(&item_id) {
+    if let Some(item) = ITEM_MAP.lock().unwrap().get(&item_id) {
         Ok(web::Json(item.clone()))
     } else {
         Err(error::ErrorNotFound("Item not found!"))
@@ -99,13 +100,13 @@ async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
 
 #[get("/tags")]
 async fn get_tags() -> Result<web::Json<Vec<Tag>>> {
-    Ok(web::Json(TAG_MAP.values().cloned().collect()))
+    Ok(web::Json(TAG_MAP.lock().unwrap().values().cloned().collect()))
 }
 
 #[get("/tag/{tag_id}")]
 async fn get_tag(req: HttpRequest) -> Result<web::Json<Tag>> {
     let tag_id: u64 = req.match_info().query("tag_id").parse().expect("Not a number");
-    if let Some(tag) = TAG_MAP.get(&tag_id) {
+    if let Some(tag) = TAG_MAP.lock().unwrap().get(&tag_id) {
         Ok(web::Json(tag.clone()))
     } else {
         Err(error::ErrorNotFound("Tag not found!"))
