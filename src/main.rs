@@ -1,6 +1,5 @@
 use actix_files::Files;
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use log::info;
 
 mod macros;
 mod models;
