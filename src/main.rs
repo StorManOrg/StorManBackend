@@ -1,5 +1,5 @@
 use actix_files::Files;
-use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web::{/* guard,*/ middleware::Logger, web, App, HttpServer};
 
 mod macros;
 mod models;
@@ -40,6 +40,7 @@ async fn main() -> std::io::Result<()> {
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
+                //.guard(guard::Header("Content-Type", "application/json"))
                 .service(web_handler::get_system_info)
                 .service(web::scope("/v1")
                     .service(web_handler::get_items)
