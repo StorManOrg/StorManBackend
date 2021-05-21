@@ -121,6 +121,16 @@ async fn create_item(mut item: web::Json<Item>) -> Result<HttpResponse> {
     }))
 }
 
+#[actix_web::delete("/item/{item_id}")]
+async fn delete_item(req: HttpRequest) -> Result<HttpResponse> {
+    let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
+    if ITEM_MAP.lock().unwrap().contains_key(&item_id) {
+        Ok(HttpResponse::Ok().body(actix_web::body::Body::None))
+    } else {
+        Err(error::ErrorNotFound("Item not found!"))
+    }
+}
+
 #[actix_web::get("/tags")]
 async fn get_tags() -> Result<web::Json<Vec<Tag>>> {
     Ok(web::Json(TAG_MAP.lock().unwrap().values().cloned().collect()))
@@ -157,6 +167,23 @@ async fn create_tag(mut tag: web::Json<Tag>) -> Result<HttpResponse> {
     Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
         "tag_id" => tag.id
     }))
+}
+
+#[actix_web::delete("/tag/{tag_id}")]
+async fn delete_tag(req: HttpRequest) -> Result<HttpResponse> {
+    let tag_id: u64 = req.match_info().query("tag_id").parse().expect("Not a number");
+    if !TAG_MAP.lock().unwrap().contains_key(&tag_id) {
+        return Err(error::ErrorNotFound("Tag not found!"));
+    }
+
+    // Check if items depend on this tag
+    // Stream: get all items -> map them to an array of tag ids -> check if there is a match
+    if ITEM_MAP.lock().unwrap().values().flat_map(|item| &item.tags).any(|&map_tag_id| map_tag_id == tag_id) {
+        return Err(error::ErrorConflict("There is an item that depends on this tag!"));
+    }
+
+    TAG_MAP.lock().unwrap().remove(&tag_id);
+    Ok(HttpResponse::Ok().body(actix_web::body::Body::None))
 }
 
 #[derive(Serialize, Deserialize, Debug)]
