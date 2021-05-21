@@ -1,4 +1,4 @@
-use actix_web::{error, get, put, web, HttpRequest, HttpResponse, Result};
+use actix_web::{error, web, HttpRequest, HttpResponse, Result};
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -83,12 +83,12 @@ lazy_static! {
     });
 }
 
-#[get("/items")]
+#[actix_web::get("/items")]
 async fn get_items() -> Result<web::Json<Vec<Item>>> {
     Ok(web::Json(ITEM_MAP.lock().unwrap().values().cloned().collect()))
 }
 
-#[get("/item/{item_id}")]
+#[actix_web::get("/item/{item_id}")]
 async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
     let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
     if let Some(item) = ITEM_MAP.lock().unwrap().get(&item_id) {
@@ -98,7 +98,7 @@ async fn get_item(req: HttpRequest) -> Result<web::Json<Item>> {
     }
 }
 
-#[put("/item")]
+#[actix_web::put("/item")]
 async fn create_item(mut item: web::Json<Item>) -> Result<HttpResponse> {
     if item.id != 0 {
         return Err(error::ErrorBadRequest("Item id must be 0!"));
@@ -121,12 +121,12 @@ async fn create_item(mut item: web::Json<Item>) -> Result<HttpResponse> {
     }))
 }
 
-#[get("/tags")]
+#[actix_web::get("/tags")]
 async fn get_tags() -> Result<web::Json<Vec<Tag>>> {
     Ok(web::Json(TAG_MAP.lock().unwrap().values().cloned().collect()))
 }
 
-#[get("/tag/{tag_id}")]
+#[actix_web::get("/tag/{tag_id}")]
 async fn get_tag(req: HttpRequest) -> Result<web::Json<Tag>> {
     let tag_id: u64 = req.match_info().query("tag_id").parse().expect("Not a number");
     if let Some(tag) = TAG_MAP.lock().unwrap().get(&tag_id) {
@@ -136,7 +136,7 @@ async fn get_tag(req: HttpRequest) -> Result<web::Json<Tag>> {
     }
 }
 
-#[put("/tag")]
+#[actix_web::put("/tag")]
 async fn create_tag(mut tag: web::Json<Tag>) -> Result<HttpResponse> {
     if tag.id != 0 {
         return Err(error::ErrorBadRequest("Tag id must be 0!"));
@@ -167,7 +167,7 @@ struct ServerInfo {
     os_version: Option<String>,
 }
 
-#[get("/info")]
+#[actix_web::get("/info")]
 async fn get_system_info() -> Result<web::Json<ServerInfo>> {
     let system_info = sysinfo::System::new();
 
