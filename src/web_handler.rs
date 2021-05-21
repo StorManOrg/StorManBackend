@@ -110,7 +110,7 @@ async fn create_item(mut item: web::Json<Item>) -> Result<HttpResponse> {
     }
 
     // Generate a new random id
-    item.id = rand::random();
+    item.id = rand::random::<u16>() as u64;
     while ITEM_MAP.lock().unwrap().contains_key(&item.id) {
         item.id = rand::random::<u16>() as u64;
     }
@@ -158,7 +158,7 @@ async fn create_tag(mut tag: web::Json<Tag>) -> Result<HttpResponse> {
     }
 
     // Generate a new random id
-    tag.id = rand::random();
+    tag.id = rand::random::<u16>() as u64;
     while ITEM_MAP.lock().unwrap().contains_key(&tag.id) {
         tag.id = rand::random::<u16>() as u64;
     }
