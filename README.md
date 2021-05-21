@@ -21,10 +21,11 @@ VS-Code Extensions:
 * [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb) (for debugging)
 
 Workspace:
-* ``git clone https://github.com/StorageReloaded/Server.git``
-* ``cd Server/``
-* ``cargo run``
-
+```shell
+$ git clone https://github.com/StorageReloaded/Server.git
+$ cd Server/``
+$ cargo run
+```
 
 ## Links
 [:book: Wiki](https://github.com/StorageReloaded/StoRe/wiki)
