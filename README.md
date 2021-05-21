@@ -18,7 +18,7 @@ System:
 
 VS-Code Extensions:
 * [Official Rust Extension](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust)
-  * Alternative: [rust-analyzer](https://link](https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer) (better auto completion)
+  * Alternative: [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer) (better auto completion)
 * [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb) (for debugging)
 
 Workspace:
