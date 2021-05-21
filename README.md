@@ -24,7 +24,7 @@ VS-Code Extensions:
 Workspace:
 ```shell
 $ git clone https://github.com/StorageReloaded/Server.git
-$ cd Server/``
+$ cd Server/
 $ cargo run
 ```
 
