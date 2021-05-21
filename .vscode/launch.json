@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'storage_reloaded'",
+            "name": "Debug executable 'storagereloaded'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=storage_reloaded",
-                    "--package=storage_reloaded"
+                    "--bin=storagereloaded",
+                    "--package=storagereloaded"
                 ],
                 "filter": {
-                    "name": "storage_reloaded",
+                    "name": "storagereloaded",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'storage_reloaded'",
+            "name": "Debug unit tests in library 'storagereloaded'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=storage_reloaded"
+                    "--package=storagereloaded"
                 ],
                 "filter": {
-                    "name": "storage_reloaded",
+                    "name": "storagereloaded",
                     "kind": "lib"
                 }
             },
@@ -44,16 +44,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'storage_reloaded'",
+            "name": "Debug unit tests in executable 'storagereloaded'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=storage_reloaded",
-                    "--package=storage_reloaded"
+                    "--bin=storagereloaded",
+                    "--package=storagereloaded"
                 ],
                 "filter": {
-                    "name": "storage_reloaded",
+                    "name": "storagereloaded",
                     "kind": "bin"
                 }
             },
