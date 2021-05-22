@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
         // Create a simple logger that writes all incomming requests to the console
         let logger = Logger::default();
 
-        let cors = Cors::default().allow_any_header().allow_any_origin();
+        let cors = Cors::default().allow_any_header().allow_any_origin().allow_any_method();
 
         // Create a new App that handles all client requests
         let app = App::new()
