@@ -136,7 +136,7 @@ impl FromRequest for AuthedUser {
         };
 
         if SESSION_LIST.lock().unwrap().contains(&session_id) {
-            ok(AuthedUser { session_id: session_id })
+            ok(AuthedUser { session_id })
         } else {
             err(error::ErrorForbidden("Invalid session id!"))
         }
