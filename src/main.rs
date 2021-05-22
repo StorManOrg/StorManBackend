@@ -37,8 +37,9 @@ async fn main() -> std::io::Result<()> {
 
         // Create a new App that handles all client requests
         let app = App::new()
-            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Allow-Origin", "*"))
             .wrap(logger)
+            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Allow-Origin", "*"))
+            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Allow-Headers", "*"))
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
