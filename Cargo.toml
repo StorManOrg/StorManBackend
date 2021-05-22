@@ -13,6 +13,8 @@ keywords   = ["server", "api", "storage", "management"]
 actix-web   = { version = "3" }
 actix-cors  = "0.5"
 actix-files = "0.5"
+futures     = "0.3"
+futures-util = "0.3"
 serde       = { version = "1.0", features = ["derive"] }
 serde_json  = "1.0"
 lazy_static = "1.4"

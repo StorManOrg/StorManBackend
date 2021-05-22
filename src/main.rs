@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::middleware::{Logger};
-use actix_web::{guard, web, App, HttpServer};
+use actix_web::{web, App, HttpServer};
 
 mod macros;
 mod models;
@@ -53,9 +53,6 @@ async fn main() -> std::io::Result<()> {
                     .service(web_handler::get_auth)
                     .service(web::scope("/")
                         .default_service(web::route().to(web_handler::not_implemented))
-                        // make sure that only authorized users can access the following services
-                        .guard(guard::fn_guard(|req| req.headers().contains_key("X-StoRe-Session")))
-                        .guard(guard::fn_guard(web_handler::auth_guard))
                         .service(web_handler::get_items)
                         .service(web_handler::get_items)
                         .service(web_handler::get_item)
