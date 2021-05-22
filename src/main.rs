@@ -64,7 +64,10 @@ async fn main() -> std::io::Result<()> {
         // After registering the api services, register the static file service.
         // If the user dosn't need static serving, this step will be skipped
         if static_serving {
-            app.service(Files::new("/", "./static").prefer_utf8(true).index_file(index_file.as_str()))
+            app.service(Files::new("/", "./static")
+                .prefer_utf8(true)
+                .index_file(index_file.as_str())
+            )
         } else {
             app
         }
