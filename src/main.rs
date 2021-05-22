@@ -46,10 +46,13 @@ async fn main() -> std::io::Result<()> {
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
                 //.guard(guard::Header("Content-Type", "application/json"))
+                .default_service(web::route().to(web_handler::not_implemented))
                 .service(web_handler::get_system_info)
                 .service(web::scope("/v1")
+                    .default_service(web::route().to(web_handler::not_implemented))
                     .service(web_handler::get_auth)
                     .service(web::scope("/")
+                        .default_service(web::route().to(web_handler::not_implemented))
                         // make sure that only authorized users can access the following services
                         .guard(guard::fn_guard(|req| req.headers().contains_key("X-StoRe-Session")))
                         .guard(guard::fn_guard(web_handler::auth_guard))

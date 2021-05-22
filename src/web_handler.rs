@@ -1,4 +1,4 @@
-use actix_web::{dev::RequestHead, error, web, HttpRequest, HttpResponse, Result};
+use actix_web::{body::Body, dev::RequestHead, error, web, HttpRequest, HttpResponse, Result};
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -158,7 +158,7 @@ async fn create_item(mut item: web::Json<Item>) -> Result<HttpResponse> {
 async fn delete_item(req: HttpRequest) -> Result<HttpResponse> {
     let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
     if ITEM_MAP.lock().unwrap().contains_key(&item_id) {
-        Ok(HttpResponse::Ok().body(actix_web::body::Body::None))
+        Ok(HttpResponse::Ok().body(Body::None))
     } else {
         Err(error::ErrorNotFound("Item not found!"))
     }
@@ -216,7 +216,7 @@ async fn delete_tag(req: HttpRequest) -> Result<HttpResponse> {
     }
 
     TAG_MAP.lock().unwrap().remove(&tag_id);
-    Ok(HttpResponse::Ok().body(actix_web::body::Body::None))
+    Ok(HttpResponse::Ok().body(Body::None))
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -237,4 +237,8 @@ async fn get_system_info() -> Result<web::Json<ServerInfo>> {
         os: system_info.get_name(),
         os_version: system_info.get_os_version(),
     }))
+}
+
+pub(crate) async fn not_implemented() -> Result<HttpResponse> {
+    Ok(HttpResponse::NotImplemented().body(Body::None))
 }
