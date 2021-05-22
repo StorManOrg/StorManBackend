@@ -1,5 +1,5 @@
 use actix_files::Files;
-use actix_web::{/* guard,*/ middleware::Logger, web, App, HttpServer};
+use actix_web::{App, HttpServer, guard, middleware::Logger, web};
 
 mod macros;
 mod models;
@@ -43,14 +43,21 @@ async fn main() -> std::io::Result<()> {
                 //.guard(guard::Header("Content-Type", "application/json"))
                 .service(web_handler::get_system_info)
                 .service(web::scope("/v1")
-                    .service(web_handler::get_items)
-                    .service(web_handler::get_item)
-                    .service(web_handler::create_item)
-                    .service(web_handler::delete_item)
-                    .service(web_handler::get_tags)
-                    .service(web_handler::create_tag)
-                    .service(web_handler::delete_tag)
-                    .service(web_handler::get_tag)
+                    .service(web_handler::get_auth)
+                    .service(web::scope("/")
+                        // make sure that only authorized users can access the following services
+                        .guard(guard::fn_guard(|req| req.headers().contains_key("X-StoRe-Session")))
+                        .guard(guard::fn_guard(web_handler::auth_guard))
+                        .service(web_handler::get_items)
+                        .service(web_handler::get_items)
+                        .service(web_handler::get_item)
+                        .service(web_handler::create_item)
+                        .service(web_handler::delete_item)
+                        .service(web_handler::get_tags)
+                        .service(web_handler::create_tag)
+                        .service(web_handler::delete_tag)
+                        .service(web_handler::get_tag)
+                    )
                 )
         );
 

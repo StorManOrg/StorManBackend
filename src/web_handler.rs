@@ -1,8 +1,11 @@
-use actix_web::{error, web, HttpRequest, HttpResponse, Result};
+use actix_web::{dev::RequestHead, error, web, HttpRequest, HttpResponse, Result};
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 use sysinfo::SystemExt;
+
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 
 use crate::models::{Item, Property, Tag};
 
@@ -81,6 +84,36 @@ lazy_static! {
             icon: Some(23),
         }
     });
+    static ref SESSION_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AuthRequest {
+    username: String,
+    password: String,
+}
+
+#[actix_web::get("/auth")]
+async fn get_auth(req: web::Json<AuthRequest>) -> Result<HttpResponse> {
+    if !(req.username == "admin" && req.password == "123") {
+        return Err(error::ErrorForbidden("Invalid username or password!"));
+    }
+
+    let mut session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+    while SESSION_LIST.lock().unwrap().contains(&session_id) {
+        session_id = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+    }
+
+    SESSION_LIST.lock().unwrap().push(session_id.clone());
+    Ok(HttpResponse::Ok().json::<HashMap<&str, String>>(collection! {
+        "session_id" => session_id
+    }))
+}
+
+pub fn auth_guard(req: &RequestHead) -> bool {
+    let session_id = req.headers().get("X-StoRe-Session").unwrap().to_str();
+    let session_id = session_id.expect("Invalid characters in session id!").to_string();
+    SESSION_LIST.lock().unwrap().contains(&session_id)
 }
 
 #[actix_web::get("/items")]
