@@ -1,5 +1,6 @@
 use actix_files::Files;
-use actix_web::{App, HttpServer, guard, middleware::Logger, web};
+use actix_web::middleware::{self, Logger};
+use actix_web::{guard, web, App, HttpServer};
 
 mod macros;
 mod models;
@@ -36,6 +37,7 @@ async fn main() -> std::io::Result<()> {
 
         // Create a new App that handles all client requests
         let app = App::new()
+            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Origin", "*"))
             .wrap(logger)
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
