@@ -1,5 +1,6 @@
+use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::middleware::{self, Logger};
+use actix_web::middleware::{Logger};
 use actix_web::{guard, web, App, HttpServer};
 
 mod macros;
@@ -35,11 +36,12 @@ async fn main() -> std::io::Result<()> {
         // Create a simple logger that writes all incomming requests to the console
         let logger = Logger::default();
 
+        let cors = Cors::default().allow_any_header().allow_any_origin();
+
         // Create a new App that handles all client requests
         let app = App::new()
             .wrap(logger)
-            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Allow-Origin", "*"))
-            .wrap(middleware::DefaultHeaders::new().header("Access-Control-Allow-Headers", "*"))
+            .wrap(cors)
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
