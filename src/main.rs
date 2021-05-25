@@ -56,6 +56,7 @@ async fn main() -> std::io::Result<()> {
                 .service(web::scope("/v1")
                     .default_service(web::route().to(web_handler::not_implemented))
                     .service(web_handler::get_auth)
+                    .service(web_handler::post_auth)
                     .service(web::scope("/")
                         .default_service(web::route().to(web_handler::not_implemented))
                         .service(web_handler::get_items)

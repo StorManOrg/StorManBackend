@@ -96,6 +96,15 @@ struct UserCredentials {
 
 #[actix_web::get("/auth")]
 async fn get_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+    get_post_auth(req)
+}
+
+#[actix_web::post("/auth")]
+async fn post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+    get_post_auth(req)
+}
+
+fn get_post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
     if !(req.username == "admin" && req.password == "123") {
         return Err(error::ErrorForbidden("Invalid username or password!"));
     }
