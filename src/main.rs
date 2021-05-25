@@ -1,7 +1,10 @@
+use std::{fs::File, io::BufReader};
+
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::middleware::{Logger};
+use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
+use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
 
 mod macros;
 mod models;
@@ -33,14 +36,22 @@ async fn main() -> std::io::Result<()> {
         port as u16
     };
 
+    // SSL config
+    let use_ssl = settings.get_bool("ssl").unwrap_or(false);
+    let cert_file = settings.get_str("cert_file").unwrap_or_else(|_| String::from("cert.pem"));
+    let key_file = settings.get_str("key_file").unwrap_or_else(|_| String::from("key.pem"));
+
+    // Static serving config
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
     let index_file: String = settings.get_str("index_file").unwrap_or_else(|_| String::from("index.html"));
 
+    // Setup server
     println!("Starting server on http://{host}:{port}", host = host, port = port);
-    HttpServer::new(move || {
+    let mut server = HttpServer::new(move || {
         // Create a simple logger that writes all incomming requests to the console
         let logger = Logger::default();
 
+        // Cross-Origin Requests
         let cors = Cors::default().allow_any_header().allow_any_origin().allow_any_method().max_age(3600);
 
         // Create a new App that handles all client requests
@@ -82,8 +93,22 @@ async fn main() -> std::io::Result<()> {
         } else {
             app
         }
-    })
-    .bind((host, port))?
-    .run()
-    .await
+    });
+
+    // Setup SSL
+    server = if use_ssl {
+        let mut config = ServerConfig::new(NoClientAuth::new());
+        let cert_buf = &mut BufReader::new(File::open(cert_file).expect("Cannot read cert file!"));
+        let key_buf = &mut BufReader::new(File::open(key_file).expect("Cannot read key file!"));
+
+        let cert_chain = pemfile::certs(cert_buf).expect("Cannot parse cert file content!");
+        let mut keys = pemfile::pkcs8_private_keys(key_buf).expect("Cannot parse key file content!");
+        config.set_single_cert(cert_chain, keys.remove(0)).expect("Invalid key!");
+
+        server.bind_rustls((host, port), config)?
+    } else {
+        server.bind((host, port))?
+    };
+
+    server.run().await
 }
