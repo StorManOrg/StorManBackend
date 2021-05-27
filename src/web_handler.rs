@@ -120,6 +120,15 @@ fn get_post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
     }))
 }
 
+#[actix_web::delete("/auth")]
+async fn delete_auth(session: AuthedUser) -> Result<HttpResponse> {
+    let mut sessions = SESSION_LIST.lock().unwrap();
+    let index = sessions.iter().position(|entry| entry == &session.session_id).expect("session not found!");
+    sessions.remove(index);
+
+    Ok(HttpResponse::Ok().body(Body::None))
+}
+
 /// If this struct is a parameter in an actix service,
 /// it becomes a protected service
 #[derive(Serialize, Deserialize, Debug)]
