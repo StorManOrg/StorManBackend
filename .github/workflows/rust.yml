@@ -61,6 +61,8 @@ jobs:
         override: true
     - name: Setup cache
       uses: Swatinem/rust-cache@v1
+      with:
+        key: ${{ matrix.name }}
     - name: Build with Cargo
       uses: actions-rs/cargo@v1
       with:
