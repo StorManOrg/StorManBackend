@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: build (${{ matrix.common }})
+    name: build (${{ matrix.job.common }})
     strategy:
       matrix:
         job:
