@@ -125,5 +125,6 @@ jobs:
       with:
         crate: typos-cli
         version: latest
+        use-tool-cache: true
     - name: Run typos
       run: typos
