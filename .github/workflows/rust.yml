@@ -59,6 +59,8 @@ jobs:
         toolchain: stable
         target: ${{ matrix.target }}
         override: true
+    - name: Setup cache
+      uses: Swatinem/rust-cache@v1
     - name: Build with Cargo
       uses: actions-rs/cargo@v1
       with:
@@ -82,6 +84,8 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+    - name: Setup cache
+      uses: Swatinem/rust-cache@v1
     - name: Run cargo check
       uses: actions-rs/cargo@v1
       with:
@@ -98,6 +102,8 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+    - name: Setup cache
+      uses: Swatinem/rust-cache@v1
     - name: Run cargo test
       uses: actions-rs/cargo@v1
       with:
@@ -123,6 +129,8 @@ jobs:
         echo "b7a59815d70429a58ff3fc8fc2f6e5d48cad4566cf089ab0d929d6697fd2e95b  typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz" | sha256sum --check
         # Extract and clean up
         tar xf typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz && rm typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz
+    - name: Setup cache
+      uses: Swatinem/rust-cache@v1
     - name: Run cargo clippy
       uses: actions-rs/cargo@v1
       with:
