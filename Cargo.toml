@@ -6,7 +6,7 @@ edition = "2018"
 description = "Simple self-hosted/all-in-one storage management system"
 homepage   = "https://github.com/StorageReloaded/StoRe"
 repository = "https://github.com/StorageReloaded/Server"
-license    = "GLP-3.0"
+license    = "GPL-3.0"
 keywords   = ["server", "api", "storage", "management"]
 
 [dependencies]
