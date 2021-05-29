@@ -39,7 +39,7 @@ pub struct Tag {
 pub struct Location {
     pub id: u64,
     pub name: String,
-    pub datbase: u64,
+    pub database: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
