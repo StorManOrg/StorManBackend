@@ -5,6 +5,7 @@ use actix_files::Files;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
+use sqlx::{Row, mysql::MySqlPoolOptions};
 
 mod macros;
 mod models;
@@ -44,6 +45,28 @@ async fn main() -> std::io::Result<()> {
     // Static serving config
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
     let index_file: String = settings.get_str("index_file").unwrap_or_else(|_| String::from("index.html"));
+
+    // Database config
+    let db_type = settings.get_str("db_type").expect("DB type is not specified!");
+    let db_host = settings.get_str("db_host").expect("DB host is not specified!");
+    let db_port = settings.get_int("db_port").unwrap_or(3306);
+    let db_user = settings.get_str("db_user").expect("DB user is not specified!");
+    let db_password = settings.get_str("db_password").expect("DB password is not specified!");
+    let db_database = settings.get_str("db_database").expect("DB database is not specified!");
+    let db_url = format!(
+        "{db_type}://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}",
+        db_type = db_type,
+        db_host = db_host,
+        db_port = db_port,
+        db_user = db_user,
+        db_password = db_password,
+        db_database = db_database
+    );
+
+    let pool = MySqlPoolOptions::new().max_connections(4).connect(&db_url).await.expect("Cannot create db pool!");
+    let database = sqlx::query("SELECT * FROM item_databases").fetch_one(&pool).await.unwrap();
+    let row_id = database.try_get::<i32, _>(0).unwrap();
+    println!("{:?}", row_id);
 
     // Setup server
     println!("Starting server on http://{host}:{port}", host = host, port = port);
