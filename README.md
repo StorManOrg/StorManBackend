@@ -15,6 +15,8 @@ WIP
 ## Setup development environment
 System:
 * [Install Rust](https://rustup.rs)
+* MariaDB Server
+	* e.g.``docker run -p 3306:3306 --name store-db -e MARIADB_ROOT_PASSWORD=password123 -d mariadb:10.5-focal`` 
 
 VS-Code Extensions:
 * [Official Rust Extension](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust)
