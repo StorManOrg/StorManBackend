@@ -115,16 +115,18 @@ jobs:
         toolchain: stable
         override: true
         components: rustfmt, clippy
+    - name: Install typos
+      run: |
+        # Download binary
+        wget https://github.com/crate-ci/typos/releases/download/v1.0.3/typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz
+        # Verify checksum
+        echo "b7a59815d70429a58ff3fc8fc2f6e5d48cad4566cf089ab0d929d6697fd2e95b  typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz" | sha256sum --check
+        # Extract and clean up
+        tar xf typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz && rm typos-v1.0.3-x86_64-unknown-linux-gnu.tar.gz
     - name: Run cargo clippy
       uses: actions-rs/cargo@v1
       with:
         command: clippy
         args: -- -D warnings
-    - name: Install typos
-      uses: actions-rs/install@v0.1
-      with:
-        crate: typos-cli
-        version: latest
-        use-tool-cache: true
     - name: Run typos
-      run: typos
+      run: ./typos
