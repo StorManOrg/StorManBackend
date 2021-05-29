@@ -5,7 +5,7 @@ use actix_files::Files;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
-use sqlx::{Row, mysql::MySqlPoolOptions};
+use sqlx::mysql::MySqlPoolOptions;
 
 mod macros;
 mod models;
@@ -63,10 +63,8 @@ async fn main() -> std::io::Result<()> {
         db_database = db_database
     );
 
+    // Establish SQL server connection
     let pool = MySqlPoolOptions::new().max_connections(4).connect(&db_url).await.expect("Cannot create db pool!");
-    let database = sqlx::query("SELECT * FROM item_databases").fetch_one(&pool).await.unwrap();
-    let row_id = database.try_get::<i32, _>(0).unwrap();
-    println!("{:?}", row_id);
 
     // Setup server
     println!("Starting server on http://{host}:{port}", host = host, port = port);
@@ -81,6 +79,9 @@ async fn main() -> std::io::Result<()> {
         let app = App::new()
             .wrap(logger)
             .wrap(cors)
+            // Provide a clone of the db pool
+            // to enable services to access the database
+            .data(pool.clone())
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
@@ -103,6 +104,7 @@ async fn main() -> std::io::Result<()> {
                         .service(web_handler::create_tag)
                         .service(web_handler::delete_tag)
                         .service(web_handler::get_tag)
+                        .service(web_handler::get_databases)
                     )
                 )
         );
