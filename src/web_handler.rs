@@ -1,4 +1,4 @@
-use actix_web::{body::Body, dev, error, web, Error, FromRequest, HttpRequest, HttpResponse, Result};
+use actix_web::{dev, error, web, Error, FromRequest, HttpRequest, HttpResponse, Result};
 use futures_util::future::{err, ok, Ready};
 use serde::{Deserialize, Serialize};
 
@@ -126,7 +126,7 @@ async fn delete_auth(session: AuthedUser) -> Result<HttpResponse> {
     let index = sessions.iter().position(|entry| entry == &session.session_id).expect("session not found!");
     sessions.remove(index);
 
-    Ok(HttpResponse::Ok().body(Body::None))
+    Ok(HttpResponse::Ok().finish())
 }
 
 /// If this struct is a parameter in an actix service,
@@ -203,7 +203,7 @@ async fn create_item(_user: AuthedUser, mut item: web::Json<Item>) -> Result<Htt
 async fn delete_item(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse> {
     let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
     if ITEM_MAP.lock().unwrap().contains_key(&item_id) {
-        Ok(HttpResponse::Ok().body(Body::None))
+        Ok(HttpResponse::Ok().finish())
     } else {
         Err(error::ErrorNotFound("Item not found!"))
     }
@@ -261,7 +261,7 @@ async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse>
     }
 
     TAG_MAP.lock().unwrap().remove(&tag_id);
-    Ok(HttpResponse::Ok().body(Body::None))
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -285,5 +285,5 @@ async fn get_system_info() -> Result<web::Json<ServerInfo>> {
 }
 
 pub(crate) async fn not_implemented() -> Result<HttpResponse> {
-    Ok(HttpResponse::NotImplemented().body(Body::None))
+    Ok(HttpResponse::NotImplemented().finish())
 }
