@@ -3,7 +3,7 @@ use futures_util::future::{err, ok, Ready};
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, Row};
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 use sysinfo::SystemExt;
 
 use rand::distributions::Alphanumeric;
@@ -107,7 +107,7 @@ async fn post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
 
 fn get_post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
     if !(req.username == "admin" && req.password == "123") {
-        return Err(error::ErrorForbidden("Invalid username or password!"));
+        return Err(error::ErrorForbidden("invalid username or password!"));
     }
 
     let mut session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
@@ -124,9 +124,12 @@ fn get_post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
 #[actix_web::delete("/auth")]
 async fn delete_auth(session: AuthedUser) -> Result<HttpResponse> {
     let mut sessions = SESSION_LIST.lock().unwrap();
-    let index = sessions.iter().position(|entry| entry == &session.session_id).expect("session not found!");
-    sessions.remove(index);
+    let index = match sessions.iter().position(|entry| entry == &session.session_id) {
+        Some(index) => index,
+        None => return Err(error::ErrorForbidden("invalid session id!")),
+    };
 
+    sessions.remove(index);
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -148,16 +151,16 @@ impl FromRequest for AuthedUser {
             if let Ok(valid_seesion_id) = session_id.to_str() {
                 valid_seesion_id.to_string()
             } else {
-                return err(error::ErrorBadRequest("Invalid characters in session id!"));
+                return err(error::ErrorBadRequest("invalid characters in session id!"));
             }
         } else {
-            return err(error::ErrorBadRequest("Session id is missing!"));
+            return err(error::ErrorBadRequest("session id is missing!"));
         };
 
         if SESSION_LIST.lock().unwrap().contains(&session_id) {
             ok(AuthedUser { session_id })
         } else {
-            err(error::ErrorForbidden("Invalid session id!"))
+            err(error::ErrorForbidden("invalid session id!"))
         }
     }
 }
@@ -169,23 +172,23 @@ async fn get_items(_user: AuthedUser) -> Result<web::Json<Vec<Item>>> {
 
 #[actix_web::get("/item/{item_id}")]
 async fn get_item(_user: AuthedUser, req: HttpRequest) -> Result<web::Json<Item>> {
-    let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
+    let item_id: u64 = get_param(&req, "item_id", "item id must be a number!")?;
     if let Some(item) = ITEM_MAP.lock().unwrap().get(&item_id) {
         Ok(web::Json(item.clone()))
     } else {
-        Err(error::ErrorNotFound("Item not found!"))
+        Err(error::ErrorNotFound("item not found!"))
     }
 }
 
 #[actix_web::put("/item")]
 async fn create_item(_user: AuthedUser, mut item: web::Json<Item>) -> Result<HttpResponse> {
     if item.id != 0 {
-        return Err(error::ErrorBadRequest("Item id must be 0!"));
+        return Err(error::ErrorBadRequest("item id must be 0!"));
     }
 
     // Check if the tags exist
     if !item.tags.iter().all(|&tag_id| TAG_MAP.lock().unwrap().contains_key(&tag_id)) {
-        return Err(error::ErrorNotFound("Unknown tag id!"));
+        return Err(error::ErrorNotFound("unknown tag id!"));
     }
 
     // Generate a new random id
@@ -202,11 +205,11 @@ async fn create_item(_user: AuthedUser, mut item: web::Json<Item>) -> Result<Htt
 
 #[actix_web::delete("/item/{item_id}")]
 async fn delete_item(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse> {
-    let item_id: u64 = req.match_info().query("item_id").parse().expect("Not a number");
+    let item_id: u64 = get_param(&req, "item_id", "item id must be a number!")?;
     if ITEM_MAP.lock().unwrap().contains_key(&item_id) {
         Ok(HttpResponse::Ok().finish())
     } else {
-        Err(error::ErrorNotFound("Item not found!"))
+        Err(error::ErrorNotFound("item not found!"))
     }
 }
 
@@ -217,23 +220,23 @@ async fn get_tags(_user: AuthedUser) -> Result<web::Json<Vec<Tag>>> {
 
 #[actix_web::get("/tag/{tag_id}")]
 async fn get_tag(_user: AuthedUser, req: HttpRequest) -> Result<web::Json<Tag>> {
-    let tag_id: u64 = req.match_info().query("tag_id").parse().expect("Not a number");
+    let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
     if let Some(tag) = TAG_MAP.lock().unwrap().get(&tag_id) {
         Ok(web::Json(tag.clone()))
     } else {
-        Err(error::ErrorNotFound("Tag not found!"))
+        Err(error::ErrorNotFound("tag not found!"))
     }
 }
 
 #[actix_web::put("/tag")]
 async fn create_tag(_user: AuthedUser, mut tag: web::Json<Tag>) -> Result<HttpResponse> {
     if tag.id != 0 {
-        return Err(error::ErrorBadRequest("Tag id must be 0!"));
+        return Err(error::ErrorBadRequest("tag id must be 0!"));
     }
 
     // Check if the tag name is unique
     if TAG_MAP.lock().unwrap().values().any(|map_tag| map_tag.name == tag.name) {
-        return Err(error::ErrorNotFound("Tag name already exists!"));
+        return Err(error::ErrorNotFound("tag name already exists!"));
     }
 
     // Generate a new random id
@@ -250,7 +253,7 @@ async fn create_tag(_user: AuthedUser, mut tag: web::Json<Tag>) -> Result<HttpRe
 
 #[actix_web::delete("/tag/{tag_id}")]
 async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse> {
-    let tag_id: u64 = req.match_info().query("tag_id").parse().expect("Not a number");
+    let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
     if !TAG_MAP.lock().unwrap().contains_key(&tag_id) {
         return Err(error::ErrorNotFound("Tag not found!"));
     }
@@ -281,12 +284,7 @@ async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> Result<
 
 #[actix_web::get("/database/{database_id}")]
 async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> Result<web::Json<Database>> {
-    // Get the database id and verify that it's a number
-    let database_id: u64 = req
-        .match_info()
-        .query("database_id")
-        .parse()
-        .map_err(|_| error::ErrorBadRequest("Database id must be a number!"))?;
+    let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
 
     // Query for the object and auto convert it
     let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = ?")
@@ -328,4 +326,9 @@ async fn get_system_info() -> Result<web::Json<ServerInfo>> {
 
 pub(crate) async fn not_implemented() -> Result<HttpResponse> {
     Ok(HttpResponse::NotImplemented().finish())
+}
+
+#[rustfmt::skip]
+fn get_param<T>(req: &HttpRequest, field_name: &str, error: &'static str) -> Result<T, actix_web::Error> where T: FromStr {
+    req.match_info().query(field_name).parse::<T>().map_err(|_| error::ErrorBadRequest(error))
 }
