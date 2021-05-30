@@ -279,6 +279,33 @@ async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> Result<
     ))
 }
 
+#[actix_web::get("/database/{database_id}")]
+async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> Result<web::Json<Database>> {
+    // Get the database id and verify that it's a number
+    let database_id: u64 = req
+        .match_info()
+        .query("database_id")
+        .parse()
+        .map_err(|_| error::ErrorBadRequest("Database id must be a number!"))?;
+
+    // Query for the object and auto convert it
+    let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = ?")
+        .bind(database_id)
+        .fetch_one(pool.as_ref())
+        .await;
+
+    // Check if the query was successful and return the database object,
+    // if the database could not be found, set the status code to 404.
+    // Should a different kind of error occur, return an Internal Server Error (code: 500).
+    match query {
+        Ok(database) => Ok(web::Json(database)),
+        Err(error) => match error {
+            sqlx::Error::RowNotFound => Err(error::ErrorNotFound("Database not found!")),
+            _ => Err(error::ErrorInternalServerError("")),
+        },
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerInfo {
     api_version: u32,

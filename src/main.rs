@@ -105,6 +105,7 @@ async fn main() -> std::io::Result<()> {
                         .service(web_handler::delete_tag)
                         .service(web_handler::get_tag)
                         .service(web_handler::get_databases)
+                        .service(web_handler::get_database)
                     )
                 )
         );

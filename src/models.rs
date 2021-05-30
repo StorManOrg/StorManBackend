@@ -42,7 +42,7 @@ pub struct Location {
     pub database: u64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, sqlx::FromRow, Clone, Debug)]
 pub struct Database {
     pub id: u64,
     pub name: String,
