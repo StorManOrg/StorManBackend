@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader};
+use std::{fs::File, io::BufReader, str::FromStr};
 
 use actix_cors::Cors;
 use actix_files::Files;
@@ -47,7 +47,7 @@ async fn main() -> std::io::Result<()> {
     let index_file: String = settings.get_str("index_file").unwrap_or_else(|_| String::from("index.html"));
 
     // Database config
-    let db_type = settings.get_str("db_type").expect("DB type is not specified!");
+    let db_type = DbType::from_str(settings.get_str("db_type").expect("DB type is not specified!").as_str()).unwrap();
     let db_host = settings.get_str("db_host").expect("DB host is not specified!");
     let db_port = settings.get_int("db_port").unwrap_or(3306);
     let db_port: u16 = if db_port > (std::u16::MAX as i64) {
@@ -60,7 +60,7 @@ async fn main() -> std::io::Result<()> {
     let db_database = settings.get_str("db_database").expect("DB database is not specified!");
     let db_url = format!(
         "{db_type}://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}",
-        db_type = db_type,
+        db_type = db_type.to_string(),
         db_host = db_host,
         db_port = db_port,
         db_user = db_user,
@@ -143,4 +143,28 @@ async fn main() -> std::io::Result<()> {
     };
 
     server.run().await
+}
+
+enum DbType {
+    MariaDB,
+}
+
+impl FromStr for DbType {
+    type Err = config::ConfigError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_ascii_lowercase().as_str() {
+            "mariadb" | "mysql" => DbType::MariaDB,
+            _ => return Err(config::ConfigError::Message("Unsupported database type!".to_string())),
+        })
+    }
+}
+
+impl ToString for DbType {
+    fn to_string(&self) -> String {
+        match self {
+            DbType::MariaDB => "mysql",
+        }
+        .to_string()
+    }
 }
