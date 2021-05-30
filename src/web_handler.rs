@@ -1,7 +1,7 @@
 use actix_web::{dev, error, web, Error, FromRequest, HttpRequest, HttpResponse, Result};
 use futures_util::future::{err, ok, Ready};
 use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use sqlx::MySqlPool;
 
 use std::{collections::HashMap, str::FromStr};
 use sysinfo::SystemExt;
@@ -270,16 +270,8 @@ async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse>
 
 #[actix_web::get("/databases")]
 async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> Result<web::Json<Vec<Database>>> {
-    let database = sqlx::query("SELECT * FROM item_databases").fetch_all(pool.as_ref()).await.unwrap();
-    Ok(web::Json(
-        database
-            .iter()
-            .map(|row| Database {
-                id: row.try_get::<i64, _>(0).unwrap() as u64,
-                name: row.try_get::<String, _>(1).unwrap(),
-            })
-            .collect(),
-    ))
+    let database = sqlx::query_as::<_, Database>("SELECT * FROM item_databases").fetch_all(pool.as_ref()).await.unwrap();
+    Ok(web::Json(database))
 }
 
 #[actix_web::get("/database/{database_id}")]
