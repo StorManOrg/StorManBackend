@@ -50,6 +50,11 @@ async fn main() -> std::io::Result<()> {
     let db_type = settings.get_str("db_type").expect("DB type is not specified!");
     let db_host = settings.get_str("db_host").expect("DB host is not specified!");
     let db_port = settings.get_int("db_port").unwrap_or(3306);
+    let db_port: u16 = if db_port > (std::u16::MAX as i64) {
+        panic!("DB port number dosn't fit into an u16!");
+    } else {
+        db_port as u16
+    };
     let db_user = settings.get_str("db_user").expect("DB user is not specified!");
     let db_password = settings.get_str("db_password").expect("DB password is not specified!");
     let db_database = settings.get_str("db_database").expect("DB database is not specified!");
