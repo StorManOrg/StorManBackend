@@ -146,15 +146,12 @@ impl FromRequest for AuthedUser {
     type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {
-        // FIXME: wtf is this
-        let session_id = if let Some(session_id) = req.headers().get("X-StoRe-Session") {
-            if let Ok(valid_seesion_id) = session_id.to_str() {
-                valid_seesion_id.to_string()
-            } else {
-                return err(error::ErrorBadRequest("invalid characters in session id!"));
-            }
-        } else {
-            return err(error::ErrorBadRequest("session id is missing!"));
+        let session_id = match req.headers().get("X-StoRe-Session") {
+            Some(header) => match header.to_str() {
+                Ok(session_id) => session_id.to_string(),
+                Err(_) => return err(error::ErrorBadRequest("invalid characters in session id!")),
+            },
+            None => return err(error::ErrorBadRequest("session id is missing!")),
         };
 
         if SESSION_LIST.lock().unwrap().contains(&session_id) {
