@@ -1,5 +1,27 @@
 use serde::{Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
 use std::collections::HashMap;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserCredentials {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(sqlx::FromRow, Debug)]
+pub struct User {
+    pub username: String,
+    pub password: String,
+    pub created: DateTime<Utc>,
+    pub last_sync: DateTime<Utc>,
+}
+
+/// If this struct is a parameter in an actix service,
+/// it becomes a protected service
+#[derive(Serialize, Deserialize, sqlx::FromRow, Debug)]
+pub struct AuthedUser {
+    pub session_id: String,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Item {

@@ -1,15 +1,15 @@
 use actix_web::{dev, error, web, Error, FromRequest, HttpRequest, HttpResponse, Result};
-use futures_util::future::{err, ok, Ready};
+use futures::{future, Future};
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::{MySqlPool, Row};
 
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, pin::Pin, str::FromStr};
 use sysinfo::SystemExt;
 
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 
-use crate::models::{Database, Item, Property, Tag};
+use crate::models::{AuthedUser, Database, Item, Property, Tag, UserCredentials};
 
 use crate::collection;
 use lazy_static::lazy_static;
@@ -89,33 +89,57 @@ lazy_static! {
     static ref SESSION_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-struct UserCredentials {
-    username: String,
-    password: String,
-}
-
 #[actix_web::get("/auth")]
-async fn get_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
-    get_post_auth(req)
+async fn get_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+    get_post_auth(pool, req).await
 }
 
 #[actix_web::post("/auth")]
-async fn post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
-    get_post_auth(req)
+async fn post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+    get_post_auth(pool, req).await
 }
 
-fn get_post_auth(req: web::Json<UserCredentials>) -> Result<HttpResponse> {
-    if !(req.username == "admin" && req.password == "123") {
-        return Err(error::ErrorForbidden("invalid username or password!"));
-    }
+async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+    println!("{:?}", req);
+    // Query for the user_id with the credentials from the request
+    let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT id FROM users WHERE username = '?' AND password = '?'")
+        .bind(&req.username)
+        .bind(&req.password)
+        .fetch_one(pool.as_ref())
+        .await;
 
-    let mut session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
-    while SESSION_LIST.lock().unwrap().contains(&session_id) {
-        session_id = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
-    }
+    // Check if the user was found and extract the user id,
+    // if there was no row found, return an forbidden error (code 403)
+    let user_id: u64 = match query {
+        Ok(row) => row.try_get(0).unwrap(),
+        Err(error) => {
+            return Err(match error {
+                sqlx::Error::RowNotFound => error::ErrorForbidden("invalid username or password!"),
+                _ => error::ErrorInternalServerError(""),
+            })
+        }
+    };
 
-    SESSION_LIST.lock().unwrap().push(session_id.clone());
+    let session_id: String = loop {
+        let session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
+        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO session_ids (session_id, user_id) VALUES ('?', ?)")
+            .bind(&session_id)
+            .bind(&user_id)
+            .execute(pool.as_ref())
+            .await;
+
+        match query {
+            Ok(_) => break session_id,
+            Err(error) => {
+                return Err(match error {
+                    sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => continue,
+                    _ => error::ErrorInternalServerError(error),
+                });
+            }
+        }
+    };
+
+    SESSION_LIST.lock().unwrap().push(session_id.clone()); // Legacy
     Ok(HttpResponse::Ok().json::<HashMap<&str, String>>(collection! {
         "session_id" => session_id
     }))
@@ -133,32 +157,39 @@ async fn delete_auth(session: AuthedUser) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().finish())
 }
 
-/// If this struct is a parameter in an actix service,
-/// it becomes a protected service
-#[derive(Serialize, Deserialize, Debug)]
-struct AuthedUser {
-    session_id: String,
-}
-
 impl FromRequest for AuthedUser {
     type Error = Error;
-    type Future = Ready<Result<Self, Self::Error>>;
+    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
     type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {
+        // We need to clone the pool here because the sql operation later on
+        // are async and the compiler can't guarantee us that lifetime of the reference
+        let pool = req.app_data::<web::Data<MySqlPool>>().unwrap().clone();
         let session_id = match req.headers().get("X-StoRe-Session") {
             Some(header) => match header.to_str() {
                 Ok(session_id) => session_id.to_string(),
-                Err(_) => return err(error::ErrorBadRequest("invalid characters in session id!")),
+                Err(_) => return Box::pin(future::err(error::ErrorBadRequest("invalid characters in session id!"))),
             },
-            None => return err(error::ErrorBadRequest("session id is missing!")),
+            None => return Box::pin(future::err(error::ErrorBadRequest("session id is missing!"))),
         };
 
-        if SESSION_LIST.lock().unwrap().contains(&session_id) {
-            ok(AuthedUser { session_id })
-        } else {
-            err(error::ErrorForbidden("invalid session id!"))
-        }
+        // We need a pinned box here because sql operations are async
+        // but this is a synchronous function
+        Box::pin(async move {
+            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM session_ids WHERE session_id = '?'")
+                .bind(&session_id)
+                .fetch_one(pool.as_ref())
+                .await;
+
+            match query {
+                Ok(auth) => Ok(auth),
+                Err(error) => Err(match error {
+                    sqlx::Error::RowNotFound => error::ErrorForbidden("invalid session id!"),
+                    _ => error::ErrorInternalServerError(""),
+                }),
+            }
+        })
     }
 }
 
@@ -276,7 +307,7 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
 
     // Query for the object and auto convert it
-    let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = ?")
+    let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = '?'")
         .bind(database_id)
         .fetch_one(pool.as_ref())
         .await;
