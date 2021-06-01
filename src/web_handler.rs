@@ -109,7 +109,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         .await;
 
     // Check if the user was found and extract the user id,
-    // if there was no row found, return an forbidden error (code 403)
+    // if there was no row found, return an forbidden error (code 403).
     let user_id: u64 = match query {
         Ok(row) => row.try_get(0).unwrap(),
         Err(error) => {
@@ -120,26 +120,35 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         }
     };
 
+    // Generate a unique session_id and save it in the database.
+    // We need a infinite loop here because we want to make sure,
+    // that we don't get a duplicate.
     let session_id: String = loop {
+        // Generate 8 random alphanumeric (a-zA-Z0-9) characters.
         let session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
-        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO session_ids (session_id, user_id) VALUES ('?', ?)")
+
+        // Try to insert that into the sessions sql table...
+        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions (session_id, user_id) VALUES ('?', ?)")
             .bind(&session_id)
             .bind(&user_id)
             .execute(pool.as_ref())
             .await;
 
+        // ... and check if it succeeded.
         match query {
             Ok(_) => break session_id,
+
+            // If not, try it again (only if the error occurred because of a duplicate).
             Err(error) => {
                 return Err(match error {
                     sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => continue,
-                    _ => error::ErrorInternalServerError(error),
+                    _ => error::ErrorInternalServerError(""),
                 });
             }
         }
     };
 
-    SESSION_LIST.lock().unwrap().push(session_id.clone()); // Legacy
+    SESSION_LIST.lock().unwrap().push(session_id.clone()); // Legacy code support
     Ok(HttpResponse::Ok().json::<HashMap<&str, String>>(collection! {
         "session_id" => session_id
     }))
@@ -164,7 +173,7 @@ impl FromRequest for AuthedUser {
 
     fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {
         // We need to clone the pool here because the sql operation later on
-        // are async and the compiler can't guarantee us that lifetime of the reference
+        // are async and the compiler can't guarantee us that lifetime of the reference.
         let pool = req.app_data::<web::Data<MySqlPool>>().unwrap().clone();
         let session_id = match req.headers().get("X-StoRe-Session") {
             Some(header) => match header.to_str() {
@@ -175,9 +184,9 @@ impl FromRequest for AuthedUser {
         };
 
         // We need a pinned box here because sql operations are async
-        // but this is a synchronous function
+        // but this is a synchronous function.
         Box::pin(async move {
-            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM session_ids WHERE session_id = '?'")
+            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM sessions WHERE session_id = '?'")
                 .bind(&session_id)
                 .fetch_one(pool.as_ref())
                 .await;
@@ -306,7 +315,7 @@ async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> Result<
 async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> Result<web::Json<Database>> {
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
 
-    // Query for the object and auto convert it
+    // Query for the object and auto convert it.
     let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = '?'")
         .bind(database_id)
         .fetch_one(pool.as_ref())
