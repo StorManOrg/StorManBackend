@@ -11,6 +11,7 @@ mod macros;
 mod models;
 mod web_handler;
 
+#[rustfmt::skip]
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Setup logger
