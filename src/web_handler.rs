@@ -3,7 +3,7 @@ use futures::{future, Future};
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, Row};
 
-use std::{collections::HashMap, pin::Pin, str::FromStr};
+use std::{collections::HashMap, fmt, pin::Pin, str::FromStr};
 use sysinfo::SystemExt;
 
 use rand::distributions::Alphanumeric;
@@ -115,7 +115,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         Err(error) => {
             return Err(match error {
                 sqlx::Error::RowNotFound => error::ErrorForbidden("invalid username or password!"),
-                _ => error::ErrorInternalServerError(""),
+                _ => process_internal_error(error),
             })
         }
     };
@@ -142,7 +142,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
             Err(error) => {
                 return Err(match error {
                     sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => continue,
-                    _ => error::ErrorInternalServerError(""),
+                    _ => process_internal_error(error),
                 });
             }
         }
@@ -195,7 +195,7 @@ impl FromRequest for AuthedUser {
                 Ok(auth) => Ok(auth),
                 Err(error) => Err(match error {
                     sqlx::Error::RowNotFound => error::ErrorForbidden("invalid session id!"),
-                    _ => error::ErrorInternalServerError(""),
+                    _ => process_internal_error(error),
                 }),
             }
         })
@@ -326,10 +326,10 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     // Should a different kind of error occur, return an Internal Server Error (code: 500).
     match query {
         Ok(database) => Ok(web::Json(database)),
-        Err(error) => match error {
-            sqlx::Error::RowNotFound => Err(error::ErrorNotFound("Database not found!")),
-            _ => Err(error::ErrorInternalServerError("")),
-        },
+        Err(error) => Err(match error {
+            sqlx::Error::RowNotFound => error::ErrorNotFound("Database not found!"),
+            _ => process_internal_error(error),
+        }),
     }
 }
 
@@ -360,4 +360,9 @@ pub(crate) async fn not_implemented() -> Result<HttpResponse> {
 #[rustfmt::skip]
 fn get_param<T>(req: &HttpRequest, field_name: &str, error: &'static str) -> Result<T, actix_web::Error> where T: FromStr {
     req.match_info().query(field_name).parse::<T>().map_err(|_| error::ErrorBadRequest(error))
+}
+
+#[rustfmt::skip]
+fn process_internal_error<T>(error: T) -> error::Error where T: fmt::Debug + fmt::Display + 'static {
+    error::ErrorInternalServerError(error)
 }
