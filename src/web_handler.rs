@@ -102,7 +102,7 @@ async fn post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) 
 async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
     println!("{:?}", req);
     // Query for the user_id with the credentials from the request
-    let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT id FROM users WHERE username = '?' AND password = '?'")
+    let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT id FROM users WHERE username = ? AND password = ?")
         .bind(&req.username)
         .bind(&req.password)
         .fetch_one(pool.as_ref())
@@ -128,7 +128,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         let session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
 
         // Try to insert that into the sessions sql table...
-        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions (session_id, user_id) VALUES ('?', ?)")
+        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)")
             .bind(&session_id)
             .bind(&user_id)
             .execute(pool.as_ref())
@@ -186,7 +186,7 @@ impl FromRequest for AuthedUser {
         // We need a pinned box here because sql operations are async
         // but this is a synchronous function.
         Box::pin(async move {
-            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM sessions WHERE session_id = '?'")
+            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM sessions WHERE session_id = ?")
                 .bind(&session_id)
                 .fetch_one(pool.as_ref())
                 .await;
@@ -316,7 +316,7 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
 
     // Query for the object and auto convert it.
-    let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = '?'")
+    let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = ?")
         .bind(database_id)
         .fetch_one(pool.as_ref())
         .await;
