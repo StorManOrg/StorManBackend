@@ -1,5 +1,5 @@
-use actix_web::{dev, error, web, Error, FromRequest, HttpRequest, HttpResponse, Result};
-use futures::{future, Future};
+use actix_web::{error, web, FromRequest, HttpRequest, HttpResponse};
+use futures::future;
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, Row};
 
@@ -90,16 +90,16 @@ lazy_static! {
 }
 
 #[actix_web::get("/auth")]
-async fn get_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+async fn get_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
     get_post_auth(pool, req).await
 }
 
 #[actix_web::post("/auth")]
-async fn post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+async fn post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
     get_post_auth(pool, req).await
 }
 
-async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> Result<HttpResponse> {
+async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
     println!("{:?}", req);
     // Query for the user_id with the credentials from the request
     let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT id FROM users WHERE username = ? AND password = ?")
@@ -155,7 +155,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
 }
 
 #[actix_web::delete("/auth")]
-async fn delete_auth(session: AuthedUser) -> Result<HttpResponse> {
+async fn delete_auth(session: AuthedUser) -> actix_web::Result<HttpResponse> {
     let mut sessions = SESSION_LIST.lock().unwrap();
     let index = match sessions.iter().position(|entry| entry == &session.session_id) {
         Some(index) => index,
@@ -167,11 +167,11 @@ async fn delete_auth(session: AuthedUser) -> Result<HttpResponse> {
 }
 
 impl FromRequest for AuthedUser {
-    type Error = Error;
-    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
+    type Error = actix_web::Error;
+    type Future = Pin<Box<dyn futures::Future<Output = Result<Self, Self::Error>>>>;
     type Config = ();
 
-    fn from_request(req: &HttpRequest, _payload: &mut dev::Payload) -> Self::Future {
+    fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         // We need to clone the pool here because the sql operation later on
         // are async and the compiler can't guarantee us that lifetime of the reference.
         let pool = req.app_data::<web::Data<MySqlPool>>().unwrap().clone();
@@ -203,12 +203,12 @@ impl FromRequest for AuthedUser {
 }
 
 #[actix_web::get("/items")]
-async fn get_items(_user: AuthedUser) -> Result<web::Json<Vec<Item>>> {
+async fn get_items(_user: AuthedUser) -> actix_web::Result<web::Json<Vec<Item>>> {
     Ok(web::Json(ITEM_MAP.lock().unwrap().values().cloned().collect()))
 }
 
 #[actix_web::get("/item/{item_id}")]
-async fn get_item(_user: AuthedUser, req: HttpRequest) -> Result<web::Json<Item>> {
+async fn get_item(_user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Item>> {
     let item_id: u64 = get_param(&req, "item_id", "item id must be a number!")?;
     if let Some(item) = ITEM_MAP.lock().unwrap().get(&item_id) {
         Ok(web::Json(item.clone()))
@@ -218,7 +218,7 @@ async fn get_item(_user: AuthedUser, req: HttpRequest) -> Result<web::Json<Item>
 }
 
 #[actix_web::put("/item")]
-async fn create_item(_user: AuthedUser, mut item: web::Json<Item>) -> Result<HttpResponse> {
+async fn create_item(_user: AuthedUser, mut item: web::Json<Item>) -> actix_web::Result<HttpResponse> {
     if item.id != 0 {
         return Err(error::ErrorBadRequest("item id must be 0!"));
     }
@@ -241,7 +241,7 @@ async fn create_item(_user: AuthedUser, mut item: web::Json<Item>) -> Result<Htt
 }
 
 #[actix_web::delete("/item/{item_id}")]
-async fn delete_item(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse> {
+async fn delete_item(_user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let item_id: u64 = get_param(&req, "item_id", "item id must be a number!")?;
     if ITEM_MAP.lock().unwrap().contains_key(&item_id) {
         Ok(HttpResponse::Ok().finish())
@@ -251,12 +251,12 @@ async fn delete_item(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse
 }
 
 #[actix_web::get("/tags")]
-async fn get_tags(_user: AuthedUser) -> Result<web::Json<Vec<Tag>>> {
+async fn get_tags(_user: AuthedUser) -> actix_web::Result<web::Json<Vec<Tag>>> {
     Ok(web::Json(TAG_MAP.lock().unwrap().values().cloned().collect()))
 }
 
 #[actix_web::get("/tag/{tag_id}")]
-async fn get_tag(_user: AuthedUser, req: HttpRequest) -> Result<web::Json<Tag>> {
+async fn get_tag(_user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Tag>> {
     let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
     if let Some(tag) = TAG_MAP.lock().unwrap().get(&tag_id) {
         Ok(web::Json(tag.clone()))
@@ -266,7 +266,7 @@ async fn get_tag(_user: AuthedUser, req: HttpRequest) -> Result<web::Json<Tag>> 
 }
 
 #[actix_web::put("/tag")]
-async fn create_tag(_user: AuthedUser, mut tag: web::Json<Tag>) -> Result<HttpResponse> {
+async fn create_tag(_user: AuthedUser, mut tag: web::Json<Tag>) -> actix_web::Result<HttpResponse> {
     if tag.id != 0 {
         return Err(error::ErrorBadRequest("tag id must be 0!"));
     }
@@ -289,7 +289,7 @@ async fn create_tag(_user: AuthedUser, mut tag: web::Json<Tag>) -> Result<HttpRe
 }
 
 #[actix_web::delete("/tag/{tag_id}")]
-async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse> {
+async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
     if !TAG_MAP.lock().unwrap().contains_key(&tag_id) {
         return Err(error::ErrorNotFound("Tag not found!"));
@@ -306,13 +306,13 @@ async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> Result<HttpResponse>
 }
 
 #[actix_web::get("/databases")]
-async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> Result<web::Json<Vec<Database>>> {
+async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Database>>> {
     let database = sqlx::query_as::<_, Database>("SELECT * FROM item_databases").fetch_all(pool.as_ref()).await.unwrap();
     Ok(web::Json(database))
 }
 
 #[actix_web::get("/database/{database_id}")]
-async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> Result<web::Json<Database>> {
+async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Database>> {
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
 
     // Query for the object and auto convert it.
@@ -342,7 +342,7 @@ struct ServerInfo {
 }
 
 #[actix_web::get("/info")]
-async fn get_system_info() -> Result<web::Json<ServerInfo>> {
+async fn get_system_info() -> actix_web::Result<web::Json<ServerInfo>> {
     let system_info = sysinfo::System::new();
 
     Ok(web::Json(ServerInfo {
@@ -353,12 +353,12 @@ async fn get_system_info() -> Result<web::Json<ServerInfo>> {
     }))
 }
 
-pub(crate) async fn not_implemented() -> Result<HttpResponse> {
+pub(crate) async fn not_implemented() -> actix_web::Result<HttpResponse> {
     Ok(HttpResponse::NotImplemented().finish())
 }
 
 #[rustfmt::skip]
-fn get_param<T>(req: &HttpRequest, field_name: &str, error: &'static str) -> Result<T, actix_web::Error> where T: FromStr {
+fn get_param<T>(req: &HttpRequest, field_name: &str, error: &'static str) -> actix_web::Result<T, actix_web::Error> where T: FromStr {
     req.match_info().query(field_name).parse::<T>().map_err(|_| error::ErrorBadRequest(error))
 }
 

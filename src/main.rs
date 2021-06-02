@@ -1,7 +1,5 @@
 use std::{fs::File, io::BufReader, str::FromStr, time::Duration};
 
-use actix_cors::Cors;
-use actix_files::Files;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
@@ -91,7 +89,7 @@ async fn main() -> std::io::Result<()> {
         let logger = Logger::default();
 
         // Cross-Origin Requests
-        let cors = Cors::default().allow_any_header().allow_any_origin().allow_any_method().max_age(3600);
+        let cors = actix_cors::Cors::default().allow_any_header().allow_any_origin().allow_any_method().max_age(3600);
 
         // Create a new App that handles all client requests
         let app = App::new()
@@ -131,7 +129,7 @@ async fn main() -> std::io::Result<()> {
         // After registering the api services, register the static file service.
         // If the user dosn't need static serving, this step will be skipped
         if static_serving {
-            app.service(Files::new("/", "./static")
+            app.service(actix_files::Files::new("/", "./static")
                 .prefer_utf8(true)
                 .index_file(index_file.as_str())
             )
