@@ -159,7 +159,7 @@ async fn main() -> std::io::Result<()> {
 }
 
 enum DbType {
-    MariaDB,
+    MySQL,
 }
 
 impl FromStr for DbType {
@@ -167,7 +167,7 @@ impl FromStr for DbType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_ascii_lowercase().as_str() {
-            "mariadb" | "mysql" => DbType::MariaDB,
+            "mysql" | "mariadb" => DbType::MySQL,
             _ => return Err(config::ConfigError::Message("Unsupported database type!".to_string())),
         })
     }
@@ -176,7 +176,7 @@ impl FromStr for DbType {
 impl ToString for DbType {
     fn to_string(&self) -> String {
         match self {
-            DbType::MariaDB => "mysql",
+            DbType::MySQL => "mysql",
         }
         .to_string()
     }
