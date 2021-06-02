@@ -1,11 +1,11 @@
-use std::{fs::File, io::BufReader, str::FromStr};
+use std::{fs::File, io::BufReader, str::FromStr, time::Duration};
 
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
-use sqlx::mysql::MySqlPoolOptions;
+use sqlx::{mysql::MySqlPoolOptions};
 
 mod macros;
 mod models;
@@ -68,8 +68,20 @@ async fn main() -> std::io::Result<()> {
         db_database = db_database
     );
 
-    // Establish SQL server connection
-    let pool = MySqlPoolOptions::new().max_connections(4).connect(&db_url).await.expect("Cannot create db pool!");
+    // Establish MySQL server connection (Pool with 4 connections, Timeout after 5 seconds)
+    let pool = match MySqlPoolOptions::new().max_connections(4).connect_timeout(Duration::from_secs(5)).connect(&db_url).await {
+        Ok(pool) => pool,
+
+        // if that fails, print an error message and exit the programm
+        Err(error) => {
+            eprintln!("Error: {}", match error {
+                sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host dosn't match!".to_string(),
+                sqlx::Error::Tls(msg) => format!("TLS Error! {}", msg.to_string()),
+                _ => error.to_string(),
+            });
+            std::process::exit(1); // Exit with error code 1
+        },
+    };
 
     // Setup server
     println!("Starting server on http://{host}:{port}", host = host, port = port);
