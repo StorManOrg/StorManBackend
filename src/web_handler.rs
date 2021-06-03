@@ -292,13 +292,13 @@ async fn create_tag(_user: AuthedUser, mut tag: web::Json<Tag>) -> actix_web::Re
 async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
     if !TAG_MAP.lock().unwrap().contains_key(&tag_id) {
-        return Err(error::ErrorNotFound("Tag not found!"));
+        return Err(error::ErrorNotFound("tag not found!"));
     }
 
     // Check if items depend on this tag
     // Stream: get all items -> map them to an array of tag ids -> check if there is a match
     if ITEM_MAP.lock().unwrap().values().flat_map(|item| &item.tags).any(|&map_tag_id| map_tag_id == tag_id) {
-        return Err(error::ErrorConflict("There is an item that depends on this tag!"));
+        return Err(error::ErrorConflict("there is an item that depends on this tag!"));
     }
 
     TAG_MAP.lock().unwrap().remove(&tag_id);
@@ -327,7 +327,7 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     match query {
         Ok(database) => Ok(web::Json(database)),
         Err(error) => Err(match error {
-            sqlx::Error::RowNotFound => error::ErrorNotFound("Database not found!"),
+            sqlx::Error::RowNotFound => error::ErrorNotFound("database not found!"),
             _ => error::ErrorInternalServerError(error),
         }),
     }
@@ -346,7 +346,7 @@ async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: w
 
     if let Err(error) = query {
         return Err(match error {
-            sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("There already is a database with this name!"),
+            sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a database with this name!"),
             _ => error::ErrorInternalServerError(error),
         });
     }
