@@ -333,6 +333,24 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     }
 }
 
+#[actix_web::put("/database")]
+async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: web::Json<Database>) -> actix_web::Result<HttpResponse> {
+    if database.id != 0 {
+        return Err(error::ErrorBadRequest("database id must be 0!"));
+    }
+
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO item_databases (name) VALUES (?)").bind(&database.name).execute(pool.as_ref()).await;
+
+    if let Err(error) = query {
+        return Err(match error {
+            sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("There already is a database with this name!"),
+            _ => process_internal_error(error),
+        });
+    }
+
+    Ok(HttpResponse::Created().finish())
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerInfo {
     api_version: u32,
