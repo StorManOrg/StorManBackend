@@ -354,6 +354,23 @@ async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: w
     Ok(HttpResponse::Created().finish())
 }
 
+#[actix_web::delete("/database/{database_id}")]
+async fn delete_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
+    let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
+
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("DELETE FROM item_databases WHERE id = ?").bind(&database_id).execute(pool.as_ref()).await;
+
+    // Get the query result or else return error 500.
+    let query_result = query.map_err(|error| error::ErrorInternalServerError(error))?;
+
+    // If nothing was deleted, the database didn't even exist!
+    if query_result.rows_affected() == 0 {
+        return Err(error::ErrorNotFound("database not found!"));
+    }
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerInfo {
     api_version: u32,

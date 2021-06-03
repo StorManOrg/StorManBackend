@@ -125,6 +125,7 @@ async fn main() -> std::io::Result<()> {
                     .service(web_handler::get_databases)
                     .service(web_handler::get_database)
                     .service(web_handler::put_database)
+                    .service(web_handler::delete_database)
                 )
         );
 
