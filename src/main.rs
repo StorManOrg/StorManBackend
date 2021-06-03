@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader, str::FromStr, time::Duration};
 
-use actix_web::middleware::Logger;
+use actix_web::middleware::{errhandlers::ErrorHandlers, Logger};
 use actix_web::{web, App, HttpServer};
 use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
 use sqlx::mysql::MySqlPoolOptions;
@@ -95,6 +95,7 @@ async fn main() -> std::io::Result<()> {
         let app = App::new()
             .wrap(logger)
             .wrap(cors)
+            .wrap(ErrorHandlers::new().handler(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, web_handler::sanitize_internal_error))
             // Provide a clone of the db pool
             // to enable services to access the database
             .data(pool.clone())

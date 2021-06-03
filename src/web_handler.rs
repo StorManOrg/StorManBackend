@@ -1,9 +1,9 @@
-use actix_web::{error, web, FromRequest, HttpRequest, HttpResponse};
+use actix_web::{error, middleware::errhandlers::ErrorHandlerResponse, web, FromRequest, HttpRequest, HttpResponse};
 use futures::future;
 use serde::{Deserialize, Serialize};
 use sqlx::{MySqlPool, Row};
 
-use std::{collections::HashMap, fmt, pin::Pin, str::FromStr};
+use std::{collections::HashMap, pin::Pin, str::FromStr};
 use sysinfo::SystemExt;
 
 use rand::distributions::Alphanumeric;
@@ -115,7 +115,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         Err(error) => {
             return Err(match error {
                 sqlx::Error::RowNotFound => error::ErrorForbidden("invalid username or password!"),
-                _ => process_internal_error(error),
+                _ => error::ErrorInternalServerError(error),
             })
         }
     };
@@ -142,7 +142,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
             Err(error) => {
                 return Err(match error {
                     sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => continue,
-                    _ => process_internal_error(error),
+                    _ => error::ErrorInternalServerError(error),
                 });
             }
         }
@@ -195,7 +195,7 @@ impl FromRequest for AuthedUser {
                 Ok(auth) => Ok(auth),
                 Err(error) => Err(match error {
                     sqlx::Error::RowNotFound => error::ErrorForbidden("invalid session id!"),
-                    _ => process_internal_error(error),
+                    _ => error::ErrorInternalServerError(error),
                 }),
             }
         })
@@ -328,7 +328,7 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
         Ok(database) => Ok(web::Json(database)),
         Err(error) => Err(match error {
             sqlx::Error::RowNotFound => error::ErrorNotFound("Database not found!"),
-            _ => process_internal_error(error),
+            _ => error::ErrorInternalServerError(error),
         }),
     }
 }
@@ -339,12 +339,15 @@ async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: w
         return Err(error::ErrorBadRequest("database id must be 0!"));
     }
 
-    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO item_databases (name) VALUES (?)").bind(&database.name).execute(pool.as_ref()).await;
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO item_databases (name) VALUES (?)")
+        .bind(&database.name)
+        .execute(pool.as_ref())
+        .await;
 
     if let Err(error) = query {
         return Err(match error {
             sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("There already is a database with this name!"),
-            _ => process_internal_error(error),
+            _ => error::ErrorInternalServerError(error),
         });
     }
 
@@ -371,6 +374,11 @@ async fn get_system_info() -> actix_web::Result<web::Json<ServerInfo>> {
     }))
 }
 
+pub(crate) fn sanitize_internal_error<B>(mut res: actix_web::dev::ServiceResponse<B>) -> actix_web::Result<ErrorHandlerResponse<B>> {
+    res.take_body(); // Delete the http body
+    Ok(ErrorHandlerResponse::Response(res))
+}
+
 pub(crate) async fn not_implemented() -> actix_web::Result<HttpResponse> {
     Ok(HttpResponse::NotImplemented().finish())
 }
@@ -378,9 +386,4 @@ pub(crate) async fn not_implemented() -> actix_web::Result<HttpResponse> {
 #[rustfmt::skip]
 fn get_param<T>(req: &HttpRequest, field_name: &str, error: &'static str) -> actix_web::Result<T, actix_web::Error> where T: FromStr {
     req.match_info().query(field_name).parse::<T>().map_err(|_| error::ErrorBadRequest(error))
-}
-
-#[rustfmt::skip]
-fn process_internal_error<T>(error: T) -> error::Error where T: fmt::Debug + fmt::Display + 'static {
-    error::ErrorInternalServerError(error)
 }
