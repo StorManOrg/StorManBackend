@@ -361,7 +361,7 @@ async fn delete_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
     let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("DELETE FROM item_databases WHERE id = ?").bind(&database_id).execute(pool.as_ref()).await;
 
     // Get the query result or else return error 500.
-    let query_result = query.map_err(|error| error::ErrorInternalServerError(error))?;
+    let query_result = query.map_err(error::ErrorInternalServerError)?;
 
     // If nothing was deleted, the database didn't even exist!
     if query_result.rows_affected() == 0 {
