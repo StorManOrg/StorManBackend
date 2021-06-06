@@ -99,6 +99,7 @@ async fn post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) 
     get_post_auth(pool, req).await
 }
 
+#[rustfmt::skip]
 async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
     println!("{:?}", req);
     // Query for the user_id with the credentials from the request
@@ -112,19 +113,17 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
     // if there was no row found, return an forbidden error (code 403).
     let user_id: u64 = match query {
         Ok(row) => row.try_get(0).unwrap(),
-        Err(error) => {
-            return Err(match error {
-                sqlx::Error::RowNotFound => error::ErrorForbidden("invalid username or password!"),
-                _ => error::ErrorInternalServerError(error),
-            })
-        }
+        Err(error) => return Err(match error {
+            sqlx::Error::RowNotFound => error::ErrorForbidden("invalid username or password!"),
+            _ => error::ErrorInternalServerError(error),
+        }),
     };
 
     // Generate a unique session_id and save it in the database.
     // We need a infinite loop here because we want to make sure,
     // that we don't get a duplicate.
     let session_id: String = loop {
-        // Generate 8 random alphanumeric (a-zA-Z0-9) characters.
+        // Generate 8 random alphanumeric (a-z,A-Z,0-9) characters.
         let session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
 
         // Try to insert that into the sessions sql table...
@@ -138,7 +137,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         match query {
             Ok(_) => break session_id,
 
-            // If not, try it again (only if the error occurred because of a duplicate).
+            // If not, try it again (but only if the error occurred because of a duplicate).
             Err(error) => {
                 return Err(match error {
                     sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => continue,
@@ -307,8 +306,8 @@ async fn delete_tag(_user: AuthedUser, req: HttpRequest) -> actix_web::Result<Ht
 
 #[actix_web::get("/databases")]
 async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Database>>> {
-    let database = sqlx::query_as::<_, Database>("SELECT * FROM item_databases").fetch_all(pool.as_ref()).await.unwrap();
-    Ok(web::Json(database))
+    let databases = sqlx::query_as::<_, Database>("SELECT * FROM item_databases").fetch_all(pool.as_ref()).await.unwrap();
+    Ok(web::Json(databases))
 }
 
 #[actix_web::get("/database/{database_id}")]
@@ -373,8 +372,8 @@ async fn delete_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
 
 #[actix_web::get("/locations")]
 async fn get_locations(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Location>>> {
-    let location = sqlx::query_as::<_, Location>("SELECT * FROM locations").fetch_all(pool.as_ref()).await.unwrap();
-    Ok(web::Json(location))
+    let locations = sqlx::query_as::<_, Location>("SELECT * FROM locations").fetch_all(pool.as_ref()).await.unwrap();
+    Ok(web::Json(locations))
 }
 
 #[actix_web::get("/location/{location_id}")]
