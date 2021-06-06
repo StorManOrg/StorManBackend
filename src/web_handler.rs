@@ -9,7 +9,7 @@ use sysinfo::SystemExt;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 
-use crate::models::{AuthedUser, Database, Item, Property, Tag, UserCredentials};
+use crate::models::{AuthedUser, Database, Item, Location, Property, Tag, UserCredentials};
 
 use crate::collection;
 use lazy_static::lazy_static;
@@ -366,6 +366,76 @@ async fn delete_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
     // If nothing was deleted, the database didn't even exist!
     if query_result.rows_affected() == 0 {
         return Err(error::ErrorNotFound("database not found!"));
+    }
+
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[actix_web::get("/locations")]
+async fn get_locations(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Location>>> {
+    let location = sqlx::query_as::<_, Location>("SELECT * FROM locations").fetch_all(pool.as_ref()).await.unwrap();
+    Ok(web::Json(location))
+}
+
+#[actix_web::get("/location/{location_id}")]
+async fn get_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Location>> {
+    let location_id: u64 = get_param(&req, "location_id", "location id must be a number!")?;
+
+    // Query for the object and auto convert it.
+    let query: Result<Location, sqlx::Error> = sqlx::query_as::<_, Location>("SELECT * FROM locations WHERE id = ?")
+        .bind(location_id)
+        .fetch_one(pool.as_ref())
+        .await;
+
+    // Check if the query was successful and return the location,
+    // if the location could not be found, set the status code to 404.
+    // Should a different kind of error occur, return an Internal Server Error (code: 500).
+    match query {
+        Ok(location) => Ok(web::Json(location)),
+        Err(error) => Err(match error {
+            sqlx::Error::RowNotFound => error::ErrorNotFound("location not found!"),
+            _ => error::ErrorInternalServerError(error),
+        }),
+    }
+}
+
+#[rustfmt::skip]
+#[actix_web::put("/location")]
+async fn put_location(pool: web::Data<MySqlPool>, _user: AuthedUser, location: web::Json<Location>) -> actix_web::Result<HttpResponse> {
+    if location.id != 0 {
+        return Err(error::ErrorBadRequest("location id must be 0!"));
+    }
+
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO locations (name,database_id) VALUES (?,?)")
+        .bind(&location.name)
+        .bind(&location.database)
+        .execute(pool.as_ref())
+        .await;
+
+    // If the query failed try to figure out why
+    if let Err(error) = query {
+        return Err(match error {
+            sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a location with this name!"),
+            sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => error::ErrorNotFound("unknown database id!"),
+            _ => error::ErrorInternalServerError(error),
+        });
+    }
+
+    Ok(HttpResponse::Created().finish())
+}
+
+#[actix_web::delete("/location/{location_id}")]
+async fn delete_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
+    let location_id: u64 = get_param(&req, "location_id", "location id must be a number!")?;
+
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("DELETE FROM locations WHERE id = ?").bind(&location_id).execute(pool.as_ref()).await;
+
+    // Get the query result or else return error 500.
+    let query_result = query.map_err(error::ErrorInternalServerError)?;
+
+    // If nothing was deleted, the location didn't even exist!
+    if query_result.rows_affected() == 0 {
+        return Err(error::ErrorNotFound("location not found!"));
     }
 
     Ok(HttpResponse::Ok().finish())

@@ -57,10 +57,11 @@ pub struct Tag {
     pub icon: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, sqlx::FromRow, Clone, Debug)]
 pub struct Location {
     pub id: u64,
     pub name: String,
+    #[sqlx(rename = "database_id")]
     pub database: u64,
 }
 
