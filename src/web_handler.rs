@@ -500,9 +500,7 @@ async fn update_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
         Err(error) => {
             return Err(match error {
                 sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a location with this name!"),
-                sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => {
-                    error::ErrorNotFound("unknown database id!")
-                }
+                sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => error::ErrorNotFound("unknown database id!"),
                 _ => error::ErrorInternalServerError(error),
             })
         }
