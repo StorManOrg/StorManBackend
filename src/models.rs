@@ -49,7 +49,7 @@ pub struct Property {
     pub max: Option<u64>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, sqlx::FromRow, Clone, Debug)]
 pub struct Tag {
     pub id: u64,
     pub name: String,
