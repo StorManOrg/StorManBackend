@@ -361,6 +361,39 @@ async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: w
     }))
 }
 
+#[actix_web::post("/database/{database_id}")]
+async fn update_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest, database: web::Json<Database>) -> actix_web::Result<HttpResponse> {
+    let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
+    if database.id != database_id {
+        return Err(error::ErrorBadRequest("the database ids don't match!"));
+    }
+
+    // Update the object in the sql table...
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("UPDATE item_databases SET name = ? WHERE id = ?")
+        .bind(&database.name)
+        .bind(&database.id)
+        .execute(pool.as_ref())
+        .await;
+
+    // ...then make sure it didn't fail.
+    let result = match query {
+        Ok(result) => result,
+        Err(error) => {
+            return Err(match error {
+                sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a database with this name!"),
+                _ => error::ErrorInternalServerError(error),
+            })
+        }
+    };
+
+    // If nothing was changed, the database didn't even exist!
+    if result.rows_affected() == 0 {
+        return Err(error::ErrorNotFound("database not found!"));
+    }
+
+    Ok(HttpResponse::Ok().finish())
+}
+
 #[actix_web::delete("/database/{database_id}")]
 async fn delete_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
@@ -444,6 +477,43 @@ async fn put_location(pool: web::Data<MySqlPool>, _user: AuthedUser, location: w
     Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
         "location_id" => location_id
     }))
+}
+
+#[actix_web::post("/location/{location_id}")]
+async fn update_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest, location: web::Json<Location>) -> actix_web::Result<HttpResponse> {
+    let location_id: u64 = get_param(&req, "location_id", "location id must be a number!")?;
+    if location.id != location_id {
+        return Err(error::ErrorBadRequest("the location ids don't match!"));
+    }
+
+    // Update the object in the sql table...
+    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("UPDATE locations SET name = ?, database_id = ? WHERE id = ?")
+        .bind(&location.name)
+        .bind(&location.database)
+        .bind(&location.id)
+        .execute(pool.as_ref())
+        .await;
+
+    // ...then make sure it didn't fail.
+    let result = match query {
+        Ok(result) => result,
+        Err(error) => {
+            return Err(match error {
+                sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a location with this name!"),
+                sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => {
+                    error::ErrorNotFound("unknown database id!")
+                }
+                _ => error::ErrorInternalServerError(error),
+            })
+        }
+    };
+
+    // If nothing was changed, the location didn't even exist!
+    if result.rows_affected() == 0 {
+        return Err(error::ErrorNotFound("location not found!"));
+    }
+
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[actix_web::delete("/location/{location_id}")]
