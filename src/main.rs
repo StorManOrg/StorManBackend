@@ -108,8 +108,7 @@ async fn main() -> std::io::Result<()> {
                 .service(web::scope("/v1")
                     .default_service(web::route().to(web_handler::not_implemented))
                     // Open access
-                    .service(web_handler::get_auth)
-                    .service(web_handler::post_auth)
+                    .service(web_handler::get_post_auth)
 
                     // Restricted access
                     .service(web_handler::delete_auth)

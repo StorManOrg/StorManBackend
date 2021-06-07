@@ -89,17 +89,8 @@ lazy_static! {
     static ref SESSION_LIST: Mutex<Vec<String>> = Mutex::new(vec![]);
 }
 
-#[actix_web::get("/auth")]
-async fn get_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
-    get_post_auth(pool, req).await
-}
-
-#[actix_web::post("/auth")]
-async fn post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
-    get_post_auth(pool, req).await
-}
-
 #[rustfmt::skip]
+#[actix_web::route("/auth", method="GET", method="POST")]
 async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
     println!("{:?}", req);
     // Query for the user_id with the credentials from the request
