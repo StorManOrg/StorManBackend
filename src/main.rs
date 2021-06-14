@@ -44,6 +44,7 @@ async fn main() -> std::io::Result<()> {
 
     // Static serving config
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
+    let static_dir: String = settings.get_str("static_dir").unwrap_or_else(|_| String::from("./static"));
     let index_file: String = settings.get_str("index_file").unwrap_or_else(|_| String::from("index.html"));
 
     // Database config
@@ -144,7 +145,7 @@ async fn main() -> std::io::Result<()> {
         // After registering the api services, register the static file service.
         // If the user dosn't need static serving, this step will be skipped
         if static_serving {
-            app.service(actix_files::Files::new("/", "./static")
+            app.service(actix_files::Files::new("/", &static_dir)
                 .prefer_utf8(true)
                 .index_file(index_file.as_str())
             )
