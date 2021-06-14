@@ -24,6 +24,7 @@ async fn main() -> std::io::Result<()> {
     // Load user preferences from config file and environment.
     // Environment variables override the config file!
     let mut settings = config::Config::default();
+    settings.merge(config::File::with_name("/etc/storeagereloaded/config").required(false)).unwrap();
     settings.merge(config::File::with_name("config").required(false)).unwrap();
     settings.merge(config::Environment::with_prefix("APP")).unwrap();
 
@@ -95,10 +96,14 @@ async fn main() -> std::io::Result<()> {
         let app = App::new()
             .wrap(logger)
             .wrap(cors)
+
+            // If an internal error occures, 
             .wrap(ErrorHandlers::new().handler(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, web_handler::sanitize_internal_error))
+
             // Provide a clone of the db pool
             // to enable services to access the database
             .data(pool.clone())
+
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
