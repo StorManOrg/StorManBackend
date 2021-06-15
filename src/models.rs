@@ -28,7 +28,7 @@ pub struct Item {
     pub id: u64,
     pub name: String,
     pub description: String,
-    pub image: String,
+    pub image: Option<String>,
     pub location: u64,
     pub tags: Vec<u64>,
     pub amount: u64,
@@ -41,12 +41,8 @@ pub struct Item {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Property {
-    pub id: u64,
     pub name: String,
     pub value: String,
-    pub display_type: Option<String>,
-    pub min: Option<u64>,
-    pub max: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, sqlx::FromRow, Clone, Debug)]

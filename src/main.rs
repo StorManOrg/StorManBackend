@@ -119,9 +119,9 @@ async fn main() -> std::io::Result<()> {
                     // Restricted access
                     .service(web_handler::delete_auth)
                     .service(web_handler::get_items)
-                    .service(web_handler::get_items)
                     .service(web_handler::get_item)
-                    .service(web_handler::create_item)
+                    .service(web_handler::put_item)
+                    .service(web_handler::update_item)
                     .service(web_handler::delete_item)
                     .service(web_handler::get_tags)
                     .service(web_handler::get_tag)
