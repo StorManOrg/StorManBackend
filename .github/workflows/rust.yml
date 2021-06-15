@@ -99,7 +99,7 @@ jobs:
       uses: actions-rs/install@v0.1
       with:
         crate: typos-cli
-        version: 1.0.4
+        version: latest
         use-tool-cache: true
     - name: Run cargo clippy
       uses: actions-rs/cargo@v1
