@@ -32,7 +32,8 @@ async fn main() -> std::io::Result<()> {
     let host: String = settings.get_str("host").unwrap_or_else(|_| String::from("0.0.0.0"));
     let port: i64 = settings.get_int("port").unwrap_or(8081);
     let port: u16 = if port > (std::u16::MAX as i64) {
-        panic!("Port number dosn't fit into an u16!");
+        eprintln!("Error: Port number can't be over 65535!");
+        std::process::exit(1);
     } else {
         port as u16
     };
@@ -52,7 +53,8 @@ async fn main() -> std::io::Result<()> {
     let db_host = settings.get_str("db_host").expect("DB host is not specified!");
     let db_port = settings.get_int("db_port").unwrap_or(3306);
     let db_port: u16 = if db_port > (std::u16::MAX as i64) {
-        panic!("DB port number dosn't fit into an u16!");
+        eprintln!("Error: DB port number can't be over 65535!");
+        std::process::exit(1);
     } else {
         db_port as u16
     };
