@@ -39,7 +39,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         let session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
 
         // Try to insert that into the sessions sql table...
-        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)")
+        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions VALUES (?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())")
             .bind(&session_id)
             .bind(&user_id)
             .execute(pool.as_ref())
