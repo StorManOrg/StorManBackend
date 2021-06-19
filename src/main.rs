@@ -7,7 +7,7 @@ use sqlx::mysql::MySqlPoolOptions;
 
 mod macros;
 mod models;
-mod web_handler;
+mod web_handlers;
 
 #[rustfmt::skip]
 #[actix_web::main]
@@ -101,7 +101,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
 
             // If an internal error occures, 
-            .wrap(ErrorHandlers::new().handler(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, web_handler::sanitize_internal_error))
+            .wrap(ErrorHandlers::new().handler(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, web_handlers::sanitize_internal_error))
 
             // Provide a clone of the db pool
             // to enable services to access the database
@@ -111,36 +111,35 @@ async fn main() -> std::io::Result<()> {
             // move the api to a sub layer: '/' => '/api'
             .service(web::scope(if static_serving { "/api" } else { "/" })
                 //.guard(guard::Header("Content-Type", "application/json"))
-                .default_service(web::route().to(web_handler::not_implemented))
-                .service(web_handler::get_system_info)
+                .default_service(web::route().to(web_handlers::not_implemented))
+                .service(web_handlers::get_system_info)
                 .service(web::scope("/v1")
-                    .default_service(web::route().to(web_handler::not_implemented))
+                    .default_service(web::route().to(web_handlers::not_implemented))
                     // Open access
-                    .service(web_handler::get_post_auth)
+                    .service(web_handlers::auth::get_post_auth)
 
                     // Restricted access
-                    .service(web_handler::delete_auth)
-                    .service(web_handler::get_items)
-                    .service(web_handler::get_item)
-                    .service(web_handler::put_item)
-                    .service(web_handler::update_item)
-                    .service(web_handler::delete_item)
-                    .service(web_handler::get_tags)
-                    .service(web_handler::get_tag)
-                    .service(web_handler::put_tag)
-                    .service(web_handler::update_tag)
-                    .service(web_handler::delete_tag)
-                    .service(web_handler::get_tag)
-                    .service(web_handler::get_databases)
-                    .service(web_handler::get_database)
-                    .service(web_handler::put_database)
-                    .service(web_handler::update_database)
-                    .service(web_handler::delete_database)
-                    .service(web_handler::get_locations)
-                    .service(web_handler::get_location)
-                    .service(web_handler::put_location)
-                    .service(web_handler::update_location)
-                    .service(web_handler::delete_location)
+                    .service(web_handlers::auth::delete_auth)
+                    .service(web_handlers::item::get_items)
+                    .service(web_handlers::item::get_item)
+                    .service(web_handlers::item::put_item)
+                    .service(web_handlers::item::update_item)
+                    .service(web_handlers::item::delete_item)
+                    .service(web_handlers::tag::get_tags)
+                    .service(web_handlers::tag::get_tag)
+                    .service(web_handlers::tag::put_tag)
+                    .service(web_handlers::tag::update_tag)
+                    .service(web_handlers::tag::delete_tag)
+                    .service(web_handlers::database::get_databases)
+                    .service(web_handlers::database::get_database)
+                    .service(web_handlers::database::put_database)
+                    .service(web_handlers::database::update_database)
+                    .service(web_handlers::database::delete_database)
+                    .service(web_handlers::location::get_locations)
+                    .service(web_handlers::location::get_location)
+                    .service(web_handlers::location::put_location)
+                    .service(web_handlers::location::update_location)
+                    .service(web_handlers::location::delete_location)
                 )
         );
 
