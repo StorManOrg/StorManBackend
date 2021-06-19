@@ -360,6 +360,10 @@ async fn delete_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
     Ok(HttpResponse::Ok().finish())
 }
 
+/// The item table consists out of multiple tables.
+/// Because of that, we need to make small steps,
+/// to reconstruct the item in code. This function
+/// does the first part of that.
 pub(crate) fn sqlrow_to_basic_item(row: &sqlx::mysql::MySqlRow) -> Item {
     let last_edited: chrono::NaiveDateTime = row.get(6);
     let created: chrono::NaiveDateTime = row.get(7);
