@@ -31,6 +31,11 @@ async fn get_system_info() -> actix_web::Result<web::Json<ServerInfo>> {
     }))
 }
 
+#[actix_web::get("/teapod")]
+async fn teapod() -> HttpResponse {
+    HttpResponse::from_error(error::ErrorImATeapot("Your Coffee is in Another Castle!"))
+}
+
 pub(crate) fn sanitize_internal_error<B>(mut res: actix_web::dev::ServiceResponse<B>) -> actix_web::Result<ErrorHandlerResponse<B>> {
     res.take_body(); // Delete the http body
     Ok(ErrorHandlerResponse::Response(res))

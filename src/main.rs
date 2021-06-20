@@ -113,6 +113,7 @@ async fn main() -> std::io::Result<()> {
                 //.guard(guard::Header("Content-Type", "application/json"))
                 .default_service(web::route().to(web_handlers::not_implemented))
                 .service(web_handlers::get_system_info)
+                .service(web_handlers::teapod)
                 .service(web::scope("/v1")
                     .default_service(web::route().to(web_handlers::not_implemented))
                     // Open access
