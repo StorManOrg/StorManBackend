@@ -301,7 +301,7 @@ async fn update_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
 
         if let Err(error) = tag_insertion.execute(&mut tx).await {
             return Err(match error {
-                //sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => error::ErrorNotFound("unknown tag id!"),
+                sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => error::ErrorNotFound("unknown tag id!"),
                 _ => error::ErrorInternalServerError(error),
             });
         }
