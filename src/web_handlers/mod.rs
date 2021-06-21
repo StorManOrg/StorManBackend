@@ -45,6 +45,9 @@ pub(crate) async fn not_implemented() -> actix_web::Result<HttpResponse> {
     Ok(HttpResponse::NotImplemented().finish())
 }
 
+/// Extract the specified field from a request
+/// or return error 400 (Bad Request) with the
+/// provided error message.
 #[rustfmt::skip]
 fn get_param<T>(req: &HttpRequest, field_name: &str, error: &'static str) -> actix_web::Result<T, actix_web::Error> where T: FromStr {
     req.match_info().query(field_name).parse::<T>().map_err(|_| error::ErrorBadRequest(error))
