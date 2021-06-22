@@ -141,6 +141,8 @@ async fn main() -> std::io::Result<()> {
                     .service(web_handlers::location::put_location)
                     .service(web_handlers::location::update_location)
                     .service(web_handlers::location::delete_location)
+
+                    .service(web_handlers::sync::sync)
                 )
         );
 

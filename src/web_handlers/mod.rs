@@ -9,6 +9,7 @@ pub(crate) mod auth;
 pub(crate) mod database;
 pub(crate) mod item;
 pub(crate) mod location;
+pub(crate) mod sync;
 pub(crate) mod tag;
 
 #[derive(Serialize, Deserialize, Debug)]
