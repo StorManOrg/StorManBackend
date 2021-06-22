@@ -347,16 +347,33 @@ async fn update_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
 async fn delete_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let item_id: u64 = get_param(&req, "item_id", "item id must be a number!")?;
 
-    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("DELETE FROM items WHERE id = ?").bind(&item_id).execute(pool.as_ref()).await;
+    // If something goes wrong (I don't know how),
+    // we roll back to a save state automatically.
+    let mut tx = pool.as_ref().begin().await.map_err(error::ErrorInternalServerError)?;
 
-    // Get the query result or else return error 500.
-    let query_result = query.map_err(error::ErrorInternalServerError)?;
+    // Delete the item from the database. This also
+    // deletes the corresponding entries in the other
+    // tables because of the foreign key constraints.
+    let deletion_query: sqlx::mysql::MySqlQueryResult = sqlx::query("DELETE FROM items WHERE id = ?")
+        .bind(&item_id)
+        .execute(&mut tx)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
 
     // If nothing was deleted, the item didn't even exist!
-    if query_result.rows_affected() == 0 {
+    if deletion_query.rows_affected() == 0 {
         return Err(error::ErrorNotFound("item not found!"));
     }
 
+    // To be able to tell offline clients that something got
+    // deleted, we need to keep track of deleted item ids.
+    sqlx::query("INSERT INTO item_deleted VALUES (?, CURRENT_TIMESTAMP())")
+        .bind(&item_id)
+        .execute(&mut tx)
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
+    tx.commit().await.map_err(error::ErrorInternalServerError)?;
     Ok(HttpResponse::Ok().finish())
 }
 
