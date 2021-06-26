@@ -6,7 +6,7 @@
 </p>
 
 # StoRe Server
-![Rust Stable 1.52](https://img.shields.io/badge/Rust%20Stable-1.52-informational)
+![Rust Stable 1.51+](https://img.shields.io/badge/Rust%20Stable-1.51%2B-informational)
 [![Rust CI](https://github.com/StorageReloaded/Server/actions/workflows/rust.yml/badge.svg)](https://github.com/StorageReloaded/Server/actions/workflows/rust.yml)
 [![License](https://img.shields.io/github/license/StorageReloaded/Server)](https://github.com/StorageReloaded/Server/blob/master/LICENSE) 
 
