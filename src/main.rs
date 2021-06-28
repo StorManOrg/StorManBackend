@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     // Load user preferences from config file and environment.
     // Environment variables override the config file!
     let mut settings = config::Config::default();
-    settings.merge(config::File::with_name("/etc/storeagereloaded/config").required(false)).unwrap();
+    settings.merge(config::File::with_name("/etc/storagereloaded/config").required(false)).unwrap();
     settings.merge(config::File::with_name("config").required(false)).unwrap();
     settings.merge(config::Environment::with_prefix("APP")).unwrap();
 
