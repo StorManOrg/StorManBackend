@@ -46,12 +46,17 @@ jobs:
         cp LICENSE dist/
         cp target/${{ matrix.job.target }}/release/${{ matrix.job.output }} dist/
         cd dist/ && zip -r ../dist.zip ./ && cd ..
+    - name: Get release
+      id: get_release
+      uses: bruceadams/get-release@v1.2.2
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
     - name: Upload binary distribution
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ steps.get_release.outputs.upload_urll }}
         asset_path: dist.zip
         asset_name: storagereloaded_${{ steps.get_version.outputs.version-without-v }}_${{ matrix.job.name }}.zip
         asset_content_type: application/zip
@@ -96,12 +101,17 @@ jobs:
         use-cross: false
         command: deb
         args: --no-build --no-strip --target=${{ matrix.job.target }}
+    - name: Get release
+      id: get_release
+      uses: bruceadams/get-release@v1.2.2
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
     - name: Upload deb
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
         asset_path: target/${{ matrix.job.target }}/debian/storagereloaded_${{ steps.get_version.outputs.version-without-v }}_${{ matrix.job.name }}.deb
         asset_name: storagereloaded_${{ steps.get_version.outputs.version-without-v }}_${{ matrix.job.name }}.deb
         asset_content_type: application/vnd.debian.binary-package
