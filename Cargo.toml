@@ -1,6 +1,6 @@
 [package]
 name    = "storagereloaded"
-version = "0.2.0"
+version = "1.0.0"
 authors = ["Sematre <Sematre@gmx.de>"]
 edition = "2018"
 description = "Simple self-hosted/all-in-one storage management system"
