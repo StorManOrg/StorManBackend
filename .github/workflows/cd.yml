@@ -1,0 +1,107 @@
+name: Server CD
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  binary:
+    runs-on: ubuntu-latest
+    name: binary (${{ matrix.job.common }})
+    strategy:
+      matrix:
+        job:
+        - { name: linux-x86_64,   common: Linux x86 (64-Bit),   target: x86_64-unknown-linux-gnu,      output: storagereloaded     }
+        - { name: linux-x86,      common: Linux x86 (32-Bit),   target: i686-unknown-linux-gnu,        output: storagereloaded     }
+        - { name: linux-aarch64,  common: Linux ARM64,          target: aarch64-unknown-linux-gnu,     output: storagereloaded     }
+        - { name: linux-armv7,    common: Linux ARMv7,          target: armv7-unknown-linux-gnueabihf, output: storagereloaded     }
+        - { name: linux-arm,      common: Linux ARM,            target: arm-unknown-linux-gnueabihf,   output: storagereloaded     }
+        - { name: windows-x86_64, common: Windows x86 (64-Bit), target: x86_64-pc-windows-gnu,         output: storagereloaded.exe }
+        - { name: windows-x86,    common: Windows x86 (32-Bit), target: i686-pc-windows-gnu,           output: storagereloaded.exe }
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Install build tools
+      run:  sudo apt-get install zip
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.job.target }}
+        override: true
+    - name: Build with Cargo
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: build
+        args: --release --target=${{ matrix.job.target }}
+    - name: Package release
+      run: |
+        mkdir dist
+        mkdir dist/static
+        cp LICENSE dist/
+        cp target/${{ matrix.job.target }}/release/${{ matrix.job.output }} dist/
+        cd dist/ && zip -r ../dist.zip ./ && cd ..
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${${{ github.event.release.tag_name }}/v//}
+    - name: Upload binary distribution
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist.zip
+        asset_name: storagereloaded_${{ steps.get_version.outputs.VERSION }}_${{ matrix.job.name }}.zip
+        asset_content_type: application/zip
+
+  deb:
+    runs-on: ubuntu-latest
+    name: deb (${{ matrix.job.common }})
+    strategy:
+      matrix:
+        job:
+        - { name: amd64,   common: x86 (64-Bit), target: x86_64-unknown-linux-gnu      }
+        - { name: i386,    common: x86 (32-Bit), target: i686-unknown-linux-gnu        }
+        - { name: arm64,   common: ARM64,        target: aarch64-unknown-linux-gnu     }
+        - { name: armhf,   common: ARMv7,        target: armv7-unknown-linux-gnueabihf }
+    steps:
+    - name: Checkout sources
+      uses: actions/checkout@v2
+    - name: Install stable toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.job.target }}
+        override: true
+    - name: Install build tools
+      uses: actions-rs/install@v0.1
+      with:
+        crate: cargo-deb
+        version: latest
+        use-tool-cache: true
+    - name: Build with Cargo
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: true
+        command: build
+        args: --release --target=${{ matrix.job.target }}
+    - name: Package deb
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: false
+        command: deb
+        args: --no-build --no-strip --target=${{ matrix.job.target }}
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${${{ github.event.release.tag_name }}/v//}
+    - name: Upload deb
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: target/${{ matrix.job.target }}/debian/storagereloaded_${{ steps.get_version.outputs.VERSION }}_${{ matrix.job.name }}.deb
+        asset_name: storagereloaded_${{ steps.get_version.outputs.VERSION }}_${{ matrix.job.name }}.deb
+        asset_content_type: application/vnd.debian.binary-package
