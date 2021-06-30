@@ -102,8 +102,8 @@ impl FromRequest for AuthedUser {
             None => return Box::pin(future::err(error::ErrorBadRequest("session id is missing!"))),
         };
 
-        // We need a pinned box here because sql operations are async
-        // but this is a synchronous function.
+        // We need a pinned boxes here because
+        // we're using different return types.
         Box::pin(async move {
             let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM sessions WHERE session_id = ?")
                 .bind(&session_id)
