@@ -78,7 +78,7 @@ async fn get_items(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::
 
     // Convert the map back into an array:
     // Map<u64, Item> -> Vec<Item>
-    Ok(web::Json(items.into_iter().map(|(_, item)| item).collect()))
+    Ok(web::Json(items.into_values().collect()))
 }
 
 #[actix_web::get("/item/{item_id}")]
