@@ -1,4 +1,4 @@
-FROM rust:1.52 as builder
+FROM rust:1.54 as builder
 WORKDIR /usr/src/storagereloaded
 COPY . .
 RUN cargo install --path .
