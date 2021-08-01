@@ -75,7 +75,7 @@ async fn main() -> std::io::Result<()> {
     let pool = match MySqlPoolOptions::new().max_connections(4).connect_timeout(Duration::from_secs(5)).connect(&db_url).await {
         Ok(pool) => pool,
 
-        // if that fails, print an error message and exit the programm
+        // if that fails, print an error message and exit the program
         Err(error) => {
             eprintln!("Error: {}", match error {
                 sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host dosn't match!".to_string(),
@@ -89,7 +89,7 @@ async fn main() -> std::io::Result<()> {
     // Setup server
     println!("Starting server on http://{host}:{port}", host = host, port = port);
     let mut server = HttpServer::new(move || {
-        // Create a simple logger that writes all incomming requests to the console
+        // Create a simple logger that writes all incoming requests to the console
         let logger = Logger::default();
 
         // Cross-Origin Requests
@@ -100,7 +100,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(logger)
             .wrap(cors)
 
-            // If an internal error occures, 
+            // If an internal error occurs, 
             .wrap(ErrorHandlers::new().handler(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, web_handlers::sanitize_internal_error))
 
             // Provide a clone of the db pool
