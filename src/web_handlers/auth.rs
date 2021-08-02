@@ -93,6 +93,7 @@ impl FromRequest for AuthedUser {
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         // We need to clone the pool here because the sql operation later on
         // are async and the compiler can't guarantee us that lifetime of the reference.
+        // This only clones the pointer to the pool and NOT the pool itself.
         let pool = req.app_data::<web::Data<MySqlPool>>().unwrap().clone();
         let session_id = match req.headers().get("X-StoRe-Session") {
             Some(header) => match header.to_str() {
