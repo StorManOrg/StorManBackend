@@ -1,8 +1,9 @@
 [package]
-name    = "storagereloaded"
-version = "1.0.0"
-authors = ["Sematre <Sematre@gmx.de>"]
-edition = "2018"
+name     = "storagereloaded"
+version  = "1.0.0"
+authors  = ["Sematre <Sematre@gmx.de>"]
+edition  = "2021"
+resolver = "2"
 description = "Simple self-hosted/all-in-one storage management system"
 homepage   = "https://github.com/StorageReloaded/StoRe"
 repository = "https://github.com/StorageReloaded/Server"
