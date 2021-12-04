@@ -178,7 +178,7 @@ async fn put_item(pool: web::Data<MySqlPool>, _user: AuthedUser, item: web::Json
 
     // If we encounter an error then return status 500,
     // if not, extract the id from the query.
-    let item_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.try_get(0).unwrap();
+    let item_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.get(0);
 
     // (Look at the "attachments" query for an explanation)
     if !item.tags.is_empty() {
@@ -256,7 +256,7 @@ async fn update_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
     // ### FIXME ###
     // The following code is some real shit,
     // because it's basically just copy pasted code.
-    // The code dose two things:
+    // The code does two things:
     // 1. delete the item
     // 2. put the modified item back in
     //

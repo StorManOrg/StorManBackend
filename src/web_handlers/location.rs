@@ -66,7 +66,7 @@ async fn put_location(pool: web::Data<MySqlPool>, _user: AuthedUser, location: w
 
     // If we encounter an error then return status 500,
     // if not, extract the id from the query.
-    let location_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.try_get(0).unwrap();
+    let location_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.get(0);
 
     // Finally commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;

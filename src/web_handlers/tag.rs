@@ -63,7 +63,7 @@ async fn put_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, tag: web::Json<T
 
     // If we encounter an error then return status 500,
     // if not, extract the id from the query.
-    let tag_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.try_get(0).unwrap();
+    let tag_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.get(0);
 
     // Finally commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;

@@ -24,7 +24,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
     // Check if the user was found and extract the user id,
     // if there was no row found, return an forbidden error (code 403).
     let user_id: u64 = match query {
-        Ok(row) => row.try_get(0).unwrap(),
+        Ok(row) => row.get(0),
         Err(error) => return Err(match error {
             sqlx::Error::RowNotFound => error::ErrorForbidden("invalid username or password!"),
             _ => error::ErrorInternalServerError(error),
@@ -74,7 +74,7 @@ async fn delete_auth(pool: web::Data<MySqlPool>, session: AuthedUser) -> actix_w
     // Get the query result or else return error 500.
     let query_result = query.map_err(error::ErrorInternalServerError)?;
 
-    // If nothing was deleted, the item didn't even exist!
+    // If nothing was deleted, the session didn't even exist!
     // Technically this can't happen, because we made sure
     // the user's session is valid before we even entered
     // this function. (See #AuthedUser for more)
