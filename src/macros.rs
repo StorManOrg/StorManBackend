@@ -9,12 +9,12 @@
 #[macro_export]
 macro_rules! collection {
     // map-like
-    ($($key:expr => $value:expr),* $(,)?) => {
-        std::iter::Iterator::collect(std::array::IntoIter::new([$(($key, $value),)*]))
-    };
+    ($($key:expr => $value:expr),* $(,)?) => {{
+        core::convert::From::from([$(($key, $value),)*])
+    }};
 
     // set-like
-    ($($value:expr),* $(,)?) => {
-        std::iter::Iterator::collect(std::array::IntoIter::new([$($value,)*]))
-    };
+    ($($value:expr),* $(,)?) => {{
+        core::convert::From::from([$($value,)*])
+    }};
 }

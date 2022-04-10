@@ -70,9 +70,11 @@ async fn put_location(pool: web::Data<MySqlPool>, _user: AuthedUser, location: w
 
     // Finally commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;
-    Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
+
+    let map: HashMap<&str, u64> = collection! {
         "location_id" => location_id
-    }))
+    };
+    Ok(HttpResponse::Created().json(map))
 }
 
 #[rustfmt::skip]

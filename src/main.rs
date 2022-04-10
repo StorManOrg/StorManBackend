@@ -1,8 +1,9 @@
 use std::{fs::File, io::BufReader, str::FromStr, time::Duration};
 
-use actix_web::middleware::{errhandlers::ErrorHandlers, Logger};
+use actix_web::http::StatusCode;
+use actix_web::middleware::{ErrorHandlers, Logger};
 use actix_web::{web, App, HttpServer};
-use rustls::{internal::pemfile, NoClientAuth, ServerConfig};
+use rustls::ServerConfig;
 use sqlx::mysql::MySqlPoolOptions;
 
 mod macros;
@@ -10,8 +11,7 @@ mod models;
 mod web_handlers;
 
 #[rustfmt::skip]
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn run() -> Result<(), String> {
     // Setup logger
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -23,44 +23,43 @@ async fn main() -> std::io::Result<()> {
 
     // Load user preferences from config file and environment.
     // Environment variables override the config file!
-    let mut settings = config::Config::default();
-    settings.merge(config::File::with_name("/etc/storagereloaded/config").required(false)).unwrap();
-    settings.merge(config::File::with_name("config").required(false)).unwrap();
-    settings.merge(config::Environment::with_prefix("APP")).unwrap();
+    let settings = config::Config::builder()
+        .add_source(config::File::new("/etc/storagereloaded/config", config::FileFormat::Toml).required(false))
+        .add_source(config::File::new("config", config::FileFormat::Toml).required(false))
+        .add_source(config::Environment::with_prefix("APP"))
+        .build().map_err(|err| err.to_string())?;
 
     // Get port and host from config, or use the default port and host: 0.0.0.0:8081
-    let host: String = settings.get_str("host").unwrap_or_else(|_| String::from("0.0.0.0"));
+    let host: String = settings.get_string("host").unwrap_or_else(|_| String::from("0.0.0.0"));
     let port: i64 = settings.get_int("port").unwrap_or(8081);
     let port: u16 = if port > (std::u16::MAX as i64) {
-        eprintln!("Error: Port number can't be over 65535!");
-        std::process::exit(1);
+        return Err("Port number can't be over 65535!".to_string());
     } else {
         port as u16
     };
 
     // SSL config
     let use_ssl = settings.get_bool("ssl").unwrap_or(false);
-    let cert_file = settings.get_str("cert_file").unwrap_or_else(|_| String::from("cert.pem"));
-    let key_file = settings.get_str("key_file").unwrap_or_else(|_| String::from("key.pem"));
+    let cert_file = settings.get_string("cert_file").unwrap_or_else(|_| String::from("cert.pem"));
+    let key_file = settings.get_string("key_file").unwrap_or_else(|_| String::from("key.pem"));
 
     // Static serving config
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
-    let static_dir: String = settings.get_str("static_dir").unwrap_or_else(|_| String::from("./static"));
-    let index_file: String = settings.get_str("index_file").unwrap_or_else(|_| String::from("index.html"));
+    let static_dir: String = settings.get_string("static_dir").unwrap_or_else(|_| String::from("./static"));
+    let index_file: String = settings.get_string("index_file").unwrap_or_else(|_| String::from("index.html"));
 
     // Database config
-    let db_type = DbType::from_str(settings.get_str("db_type").expect("DB type is not specified!").as_str()).unwrap();
-    let db_host = settings.get_str("db_host").expect("DB host is not specified!");
+    let db_type = DbType::from_str(settings.get_string("db_type").map_err(|_| "DB type is not specified!")?.as_str()).map_err(|err| err.to_string())?;
+    let db_host = settings.get_string("db_host").map_err(|_| "DB host is not specified!")?;
     let db_port = settings.get_int("db_port").unwrap_or(3306);
     let db_port: u16 = if db_port > (std::u16::MAX as i64) {
-        eprintln!("Error: DB port number can't be over 65535!");
-        std::process::exit(1);
+        return Err("DB port number can't be over 65535!".to_string())
     } else {
         db_port as u16
     };
-    let db_user = settings.get_str("db_user").expect("DB user is not specified!");
-    let db_password = settings.get_str("db_password").expect("DB password is not specified!");
-    let db_database = settings.get_str("db_database").expect("DB database is not specified!");
+    let db_user = settings.get_string("db_user").map_err(|_| "DB user is not specified!")?;
+    let db_password = settings.get_string("db_password").map_err(|_| "DB password is not specified!")?;
+    let db_database = settings.get_string("db_database").map_err(|_| "DB database is not specified!")?;
     let db_url = format!(
         "{db_type}://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}",
         db_type = db_type.to_string(),
@@ -77,12 +76,11 @@ async fn main() -> std::io::Result<()> {
 
         // if that fails, print an error message and exit the program
         Err(error) => {
-            eprintln!("Error: {}", match error {
-                sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host dosn't match!".to_string(),
-                sqlx::Error::Tls(msg) => format!("TLS Error! {}", msg.to_string()),
+            return Err(match error {
+                sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host don't match!".to_string(),
+                sqlx::Error::Tls(msg) => format!("TLS Error! {}", msg),
                 _ => error.to_string(),
             });
-            std::process::exit(1); // Exit with error code 1
         },
     };
 
@@ -96,16 +94,16 @@ async fn main() -> std::io::Result<()> {
         let cors = actix_cors::Cors::default().allow_any_header().allow_any_origin().allow_any_method().max_age(3600);
 
         // Create a new App that handles all client requests
-        let app = App::new()
+        let mut app = App::new()
             .wrap(logger)
             .wrap(cors)
 
-            // If an internal error occurs, 
-            .wrap(ErrorHandlers::new().handler(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, web_handlers::sanitize_internal_error))
+            // If an internal error occurs, remove the sensetive content from the response
+            .wrap(ErrorHandlers::new().handler(StatusCode::INTERNAL_SERVER_ERROR, web_handlers::sanitize_internal_error))
 
-            // Provide a clone of the db pool
+            // Provide a clone of the reference to the db pool
             // to enable services to access the database
-            .data(pool.clone())
+            .app_data(actix_web::web::Data::new(pool.clone()))
 
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
@@ -145,33 +143,59 @@ async fn main() -> std::io::Result<()> {
         );
 
         // After registering the api services, register the static file service.
-        // If the user dosn't need static serving, this step will be skipped
+        // If the user doesn't need static serving, this step will be skipped
         if static_serving {
-            app.service(actix_files::Files::new("/", &static_dir)
+            app = app.service(actix_files::Files::new("/", &static_dir)
                 .prefer_utf8(true)
                 .index_file(index_file.as_str())
             )
-        } else {
-            app
-        }
+        };
+
+        app
     });
 
     // Setup SSL
     server = if use_ssl {
-        let mut config = ServerConfig::new(NoClientAuth::new());
-        let cert_buf = &mut BufReader::new(File::open(cert_file).expect("Cannot read cert file!"));
-        let key_buf = &mut BufReader::new(File::open(key_file).expect("Cannot read key file!"));
+        let cert_buf = &mut BufReader::new(File::open(cert_file).map_err(|_| "Cannot read cert file!")?);
+        let key_buf = &mut BufReader::new(File::open(key_file).map_err(|_| "Cannot read key file!")?);
 
-        let cert_chain = pemfile::certs(cert_buf).expect("Cannot parse cert file content!");
-        let mut keys = pemfile::pkcs8_private_keys(key_buf).expect("Cannot parse key file content!");
-        config.set_single_cert(cert_chain, keys.remove(0)).expect("Invalid key!");
+        let cert_chain = rustls_pemfile::certs(cert_buf)
+            .map_err(|_| "Cannot parse cert file content!")?
+            .into_iter().map(rustls::Certificate).collect();
+        let mut keys: Vec<rustls::PrivateKey> = rustls_pemfile::pkcs8_private_keys(key_buf)
+            .map_err(|_| "Cannot parse key file content!")?
+            .into_iter().map(rustls::PrivateKey).collect();
 
-        server.bind_rustls((host, port), config)?
+        // Exit if no keys could be parsed
+        if keys.is_empty() {
+            return Err("Could not locate PKCS 8 private keys.".to_string());
+        }
+
+        let config = ServerConfig::builder()
+            .with_safe_defaults()
+            .with_no_client_auth()
+            .with_single_cert(cert_chain, keys.remove(0))
+            .map_err(|err| err.to_string())?;
+
+        server.bind_rustls((host, port), config).map_err(|err| err.to_string())?
     } else {
-        server.bind((host, port))?
+        server.bind((host, port)).map_err(|err| err.to_string())?
     };
 
-    server.run().await
+    server.run().await.map_err(|err| err.to_string())
+}
+
+#[actix_web::main]
+async fn main() {
+    let result = run().await;
+
+    std::process::exit(match result {
+        Ok(_) => 0,
+        Err(error) => {
+            eprintln!("[Error] {}", error);
+            1
+        }
+    });
 }
 
 enum DbType {

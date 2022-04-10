@@ -68,9 +68,11 @@ async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: w
 
     // Finally commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;
-    Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
+
+    let map: HashMap<&str, u64> = collection! {
         "database_id" => database_id
-    }))
+    };
+    Ok(HttpResponse::Created().json(map))
 }
 
 #[actix_web::post("/database/{database_id}")]

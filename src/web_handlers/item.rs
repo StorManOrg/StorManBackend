@@ -240,9 +240,11 @@ async fn put_item(pool: web::Data<MySqlPool>, _user: AuthedUser, item: web::Json
 
     // Finally commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;
-    Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
+
+    let map: HashMap<&str, u64> = collection! {
         "item_id" => item_id
-    }))
+    };
+    Ok(HttpResponse::Created().json(map))
 }
 
 #[rustfmt::skip]

@@ -59,9 +59,10 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         }
     };
 
-    Ok(HttpResponse::Ok().json::<HashMap<&str, String>>(collection! {
-        "session_id" => session_id
-    }))
+    let map: HashMap<String, String> = collection! {
+        "session_id".to_string() => session_id
+    };
+    Ok(HttpResponse::Created().json(map))
 }
 
 #[actix_web::delete("/auth")]
@@ -88,7 +89,6 @@ async fn delete_auth(pool: web::Data<MySqlPool>, session: AuthedUser) -> actix_w
 impl FromRequest for AuthedUser {
     type Error = actix_web::Error;
     type Future = Pin<Box<dyn futures::Future<Output = Result<Self, Self::Error>>>>;
-    type Config = ();
 
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         // We need to clone the pool here because the sql operation later on

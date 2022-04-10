@@ -32,7 +32,6 @@ async fn get_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest
     }
 }
 
-#[rustfmt::skip]
 #[actix_web::put("/tag")]
 async fn put_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, tag: web::Json<Tag>) -> actix_web::Result<HttpResponse> {
     if tag.id != 0 {
@@ -67,9 +66,11 @@ async fn put_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, tag: web::Json<T
 
     // Finally commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;
-    Ok(HttpResponse::Created().json::<HashMap<&str, u64>>(collection! {
+
+    let map: HashMap<&str, u64> = collection! {
         "tag_id" => tag_id
-    }))
+    };
+    Ok(HttpResponse::Created().json(map))
 }
 
 #[actix_web::post("/tag/{tag_id}")]
