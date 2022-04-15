@@ -46,7 +46,7 @@ async fn put_location(pool: web::Data<MySqlPool>, _user: AuthedUser, location: w
     }
 
     // We need to make a transaction here because we want to make 2 queries that relate to each other.
-    let mut tx = pool.as_ref().begin().await.map_err(error::ErrorInternalServerError)?;
+    let mut tx = pool.begin().await.map_err(error::ErrorInternalServerError)?;
 
     // First insert the object into the sql table...
     let insertion_query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO locations (name,database_id) VALUES (?,?)")

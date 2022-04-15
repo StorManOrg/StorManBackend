@@ -12,11 +12,13 @@ use crate::models::{AuthedUser, UserCredentials};
 
 #[actix_web::route("/auth", method = "GET", method = "POST")]
 async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredentials>) -> actix_web::Result<HttpResponse> {
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     // Query for the user_id with the credentials from the request
     let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT id FROM users WHERE username = ? AND password = ?")
         .bind(&req.username)
         .bind(&req.password)
-        .fetch_one(pool.as_ref())
+        .fetch_one(&mut connection)
         .await;
 
     // Check if the user was found and extract the user id,
@@ -39,7 +41,7 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions VALUES (?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())")
             .bind(&session_id)
             .bind(&user_id)
-            .execute(pool.as_ref())
+            .execute(&mut connection)
             .await;
 
         // If the query failed, try it again (but only if the error occurred because of a duplicate).
@@ -83,7 +85,9 @@ impl FromRequest for AuthedUser {
     type Future = Pin<Box<dyn futures::Future<Output = Result<Self, Self::Error>>>>;
 
     // Because async trait functions are currently
-    // not supported, we need to return a Future
+    // not supported, we need to return a Future.
+    // And since Futures cannot be moved in memory
+    // we need to pin them.
     fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         // We need to clone the pool here because the sql operation in this function
         // are async and the compiler can't guarantee us that lifetime of the reference.
@@ -94,8 +98,6 @@ impl FromRequest for AuthedUser {
         }
         .clone();
 
-        // We need to pin the Futures here because
-        // the Fututes need to be returned to the caller
         let session_id = match req.headers().get("X-StoRe-Session") {
             Some(header) => match header.to_str() {
                 Ok(session_id) => session_id.to_string(),

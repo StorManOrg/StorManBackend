@@ -9,10 +9,10 @@ use crate::web_handlers::get_param;
 
 #[actix_web::get("/items")]
 async fn get_items(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Item>>> {
-    let connection = pool.as_ref();
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     let mut items: HashMap<u64, Item> = sqlx::query("SELECT * FROM items")
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -22,7 +22,7 @@ async fn get_items(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::
 
     // (Look at the "attachments" query for an explanation)
     sqlx::query("SELECT item_id, tag_id FROM item_tags")
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -37,7 +37,7 @@ async fn get_items(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::
 
     // (Look at the "attachments" query for an explanation)
     sqlx::query("SELECT item_id, is_custom, name, value FROM item_properties")
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -59,7 +59,7 @@ async fn get_items(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::
     // The sql rows only contain one part of the final map
     // so we need to go throw the hole list piece by piece.
     sqlx::query("SELECT item_id, name, url FROM item_attachments")
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -87,9 +87,9 @@ async fn get_items(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::
 async fn get_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Item>> {
     let item_id: u64 = get_param(&req, "item_id", "item id must be a number!")?;
 
-    let connection = pool.as_ref();
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
-    let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT * FROM items WHERE id = ?").bind(item_id).fetch_one(connection).await;
+    let query: Result<sqlx::mysql::MySqlRow, sqlx::Error> = sqlx::query("SELECT * FROM items WHERE id = ?").bind(item_id).fetch_one(&mut connection).await;
 
     // Check if the query was successful, convert the row into an item.
     // If the item could not be found, set the status code to 404.
@@ -103,7 +103,7 @@ async fn get_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReques
 
     item.tags = sqlx::query("SELECT tag_id FROM item_tags WHERE item_id = ?")
         .bind(&item.id)
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -112,7 +112,7 @@ async fn get_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReques
 
     sqlx::query("SELECT is_custom, name, value FROM item_properties WHERE item_id = ?")
         .bind(&item.id)
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -129,7 +129,7 @@ async fn get_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReques
 
     item.attachments = sqlx::query("SELECT name, url FROM item_attachments WHERE item_id = ?")
         .bind(&item.id)
-        .fetch_all(connection)
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?
         .iter()
@@ -150,7 +150,7 @@ async fn put_item(pool: web::Data<MySqlPool>, _user: AuthedUser, item: web::Json
     // 1. we want to make 2 queries that relate to each other
     // 2. if something goes wrong along the function,
     //    all changes to the database will be discarded.
-    let mut tx = pool.as_ref().begin().await.map_err(error::ErrorInternalServerError)?;
+    let mut tx = pool.begin().await.map_err(error::ErrorInternalServerError)?;
 
     // First insert the object into the sql table...
     let insertion_query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> =
@@ -264,7 +264,7 @@ async fn update_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
     // 2. put the modified item back in
     //
     // This is really inefficient and should be optimized in the future!
-    let mut tx = pool.as_ref().begin().await.map_err(error::ErrorInternalServerError)?;
+    let mut tx = pool.begin().await.map_err(error::ErrorInternalServerError)?;
 
     // Delete the item
     let deletion_query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("DELETE FROM items WHERE id = ?").bind(&item_id).execute(&mut tx).await;
@@ -352,7 +352,7 @@ async fn delete_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
 
     // If something goes wrong (I don't know how),
     // we roll back to a save state automatically.
-    let mut tx = pool.as_ref().begin().await.map_err(error::ErrorInternalServerError)?;
+    let mut tx = pool.begin().await.map_err(error::ErrorInternalServerError)?;
 
     // Delete the item from the database. This also
     // deletes the corresponding entries in the other
