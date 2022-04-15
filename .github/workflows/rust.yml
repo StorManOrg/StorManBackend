@@ -47,6 +47,12 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
+    name: check (${{ matrix.job.name }})
+    strategy:
+      matrix:
+        job:
+        - { name: latest, toolchain: stable }
+        - { name: msrv,   toolchain: 1.58.1 }
     steps:
     - name: Checkout sources
       uses: actions/checkout@v2
@@ -54,7 +60,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         profile: minimal
-        toolchain: stable
+        toolchain: ${{ matrix.job.toolchain }}
         override: true
     - name: Setup cache
       uses: Swatinem/rust-cache@v1

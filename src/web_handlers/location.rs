@@ -9,7 +9,11 @@ use crate::web_handlers::get_param;
 
 #[actix_web::get("/locations")]
 async fn get_locations(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Location>>> {
-    let locations = sqlx::query_as::<_, Location>("SELECT * FROM locations").fetch_all(pool.as_ref()).await.unwrap();
+    let locations = sqlx::query_as::<_, Location>("SELECT * FROM locations")
+        .fetch_all(pool.as_ref())
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
     Ok(web::Json(locations))
 }
 
@@ -26,13 +30,12 @@ async fn get_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     // Check if the query was successful and return the location,
     // if the location could not be found, set the status code to 404.
     // Should a different kind of error occur, return an Internal Server Error (code: 500).
-    match query {
-        Ok(location) => Ok(web::Json(location)),
-        Err(error) => Err(match error {
-            sqlx::Error::RowNotFound => error::ErrorNotFound("location not found!"),
-            _ => error::ErrorInternalServerError(error),
-        }),
-    }
+    let location = query.map_err(|err| match err {
+        sqlx::Error::RowNotFound => error::ErrorNotFound("location not found!"),
+        _ => error::ErrorInternalServerError(err),
+    })?;
+
+    Ok(web::Json(location))
 }
 
 #[rustfmt::skip]
@@ -68,7 +71,7 @@ async fn put_location(pool: web::Data<MySqlPool>, _user: AuthedUser, location: w
     // if not, extract the id from the query.
     let location_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.get(0);
 
-    // Finally commit the changes to make them permanent
+    // Finally, commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;
 
     let map: HashMap<&str, u64> = collection! {
@@ -94,16 +97,11 @@ async fn update_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
         .await;
 
     // ...then make sure it didn't fail.
-    let result = match query {
-        Ok(result) => result,
-        Err(error) => {
-            return Err(match error {
-                sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a location with this name!"),
-                sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => error::ErrorNotFound("unknown database id!"),
-                _ => error::ErrorInternalServerError(error),
-            })
-        }
-    };
+    let result = query.map_err(|err| match err {
+        sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a location with this name!"),
+        sqlx::Error::Database(db_error) if db_error.message().starts_with("Cannot add or update a child row: a foreign key constraint fails") => error::ErrorNotFound("unknown database id!"),
+        _ => error::ErrorInternalServerError(err),
+    })?;
 
     // If nothing was changed, the location didn't even exist!
     if result.rows_affected() == 0 {
@@ -117,13 +115,14 @@ async fn update_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
 async fn delete_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let location_id: u64 = get_param(&req, "location_id", "location id must be a number!")?;
 
-    let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("DELETE FROM locations WHERE id = ?").bind(&location_id).execute(pool.as_ref()).await;
-
-    // Get the query result or else return error 500.
-    let query_result = query.map_err(error::ErrorInternalServerError)?;
+    let query: sqlx::mysql::MySqlQueryResult = sqlx::query("DELETE FROM locations WHERE id = ?")
+        .bind(&location_id)
+        .execute(pool.as_ref())
+        .await
+        .map_err(error::ErrorInternalServerError)?;
 
     // If nothing was deleted, the location didn't even exist!
-    if query_result.rows_affected() == 0 {
+    if query.rows_affected() == 0 {
         return Err(error::ErrorNotFound("location not found!"));
     }
 

@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, str::FromStr, time::Duration};
+use std::{fs::File, io::BufReader, time::Duration};
 
 use actix_web::http::StatusCode;
 use actix_web::middleware::{ErrorHandlers, Logger};
@@ -32,11 +32,7 @@ async fn run() -> Result<(), String> {
     // Get port and host from config, or use the default port and host: 0.0.0.0:8081
     let host: String = settings.get_string("host").unwrap_or_else(|_| String::from("0.0.0.0"));
     let port: i64 = settings.get_int("port").unwrap_or(8081);
-    let port: u16 = if port > (std::u16::MAX as i64) {
-        return Err("Port number can't be over 65535!".to_string());
-    } else {
-        port as u16
-    };
+    let port: u16 = u16::try_from(port).map_err(|_| "Port number can't be over 65535!")?;
 
     // SSL config
     let use_ssl = settings.get_bool("ssl").unwrap_or(false);
@@ -49,40 +45,30 @@ async fn run() -> Result<(), String> {
     let index_file: String = settings.get_string("index_file").unwrap_or_else(|_| String::from("index.html"));
 
     // Database config
-    let db_type = DbType::from_str(settings.get_string("db_type").map_err(|_| "DB type is not specified!")?.as_str()).map_err(|err| err.to_string())?;
+    let db_type = settings.get_string("db_type").map_err(|_| "DB type is not specified!")?;
+    if !db_type.eq_ignore_ascii_case("mysql") {
+        return Err("Unsupported database type".to_string());
+    }
+
     let db_host = settings.get_string("db_host").map_err(|_| "DB host is not specified!")?;
     let db_port = settings.get_int("db_port").unwrap_or(3306);
-    let db_port: u16 = if db_port > (std::u16::MAX as i64) {
-        return Err("DB port number can't be over 65535!".to_string())
-    } else {
-        db_port as u16
-    };
+    let db_port: u16 = u16::try_from(db_port).map_err(|_| "DB port number can't be over 65535!")?;
     let db_user = settings.get_string("db_user").map_err(|_| "DB user is not specified!")?;
     let db_password = settings.get_string("db_password").map_err(|_| "DB password is not specified!")?;
     let db_database = settings.get_string("db_database").map_err(|_| "DB database is not specified!")?;
-    let db_url = format!(
-        "{db_type}://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}",
-        db_type = db_type.to_string(),
-        db_host = db_host,
-        db_port = db_port,
-        db_user = db_user,
-        db_password = db_password,
-        db_database = db_database
-    );
+    let db_url = format!("{db_type}://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}");
 
     // Establish MySQL server connection (Pool with 4 connections, Timeout after 5 seconds)
-    let pool = match MySqlPoolOptions::new().max_connections(4).connect_timeout(Duration::from_secs(5)).connect(&db_url).await {
-        Ok(pool) => pool,
-
-        // if that fails, print an error message and exit the program
-        Err(error) => {
-            return Err(match error {
-                sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host don't match!".to_string(),
-                sqlx::Error::Tls(msg) => format!("TLS Error! {}", msg),
-                _ => error.to_string(),
-            });
-        },
-    };
+    let pool = MySqlPoolOptions::new()
+        .max_connections(4)
+        .connect_timeout(Duration::from_secs(5))
+        .connect(&db_url)
+        .await
+        .map_err(|err| match err {
+            sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host don't match!".to_string(),
+            sqlx::Error::Tls(msg) => format!("TLS Error! {}", msg),
+            _ => err.to_string(),
+        })?;
 
     // Setup server
     println!("Starting server on http://{host}:{port}", host = host, port = port);
@@ -114,6 +100,7 @@ async fn run() -> Result<(), String> {
                 .service(web_handlers::teapod)
                 .service(web::scope("/v1")
                     .default_service(web::route().to(web_handlers::not_implemented))
+
                     // Open access
                     .service(web_handlers::auth::get_post_auth)
 
@@ -140,7 +127,7 @@ async fn run() -> Result<(), String> {
                     .service(web_handlers::location::update_location)
                     .service(web_handlers::location::delete_location)
                 )
-        );
+            );
 
         // After registering the api services, register the static file service.
         // If the user doesn't need static serving, this step will be skipped
@@ -168,7 +155,7 @@ async fn run() -> Result<(), String> {
 
         // Exit if no keys could be parsed
         if keys.is_empty() {
-            return Err("Could not locate PKCS 8 private keys.".to_string());
+            return Err("Could not locate PKCS 8 private keys".to_string());
         }
 
         let config = ServerConfig::builder()
@@ -196,28 +183,4 @@ async fn main() {
             1
         }
     });
-}
-
-enum DbType {
-    MySQL,
-}
-
-impl FromStr for DbType {
-    type Err = config::ConfigError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s.to_ascii_lowercase().as_str() {
-            "mysql" | "mariadb" => DbType::MySQL,
-            _ => return Err(config::ConfigError::Message("Unsupported database type!".to_string())),
-        })
-    }
-}
-
-impl ToString for DbType {
-    fn to_string(&self) -> String {
-        match self {
-            DbType::MySQL => "mysql",
-        }
-        .to_string()
-    }
 }

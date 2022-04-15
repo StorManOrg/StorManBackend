@@ -9,7 +9,11 @@ use crate::web_handlers::get_param;
 
 #[actix_web::get("/databases")]
 async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Database>>> {
-    let databases = sqlx::query_as::<_, Database>("SELECT * FROM item_databases").fetch_all(pool.as_ref()).await.unwrap();
+    let databases = sqlx::query_as::<_, Database>("SELECT * FROM item_databases")
+        .fetch_all(pool.as_ref())
+        .await
+        .map_err(error::ErrorInternalServerError)?;
+
     Ok(web::Json(databases))
 }
 
@@ -26,13 +30,12 @@ async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRe
     // Check if the query was successful and return the database object,
     // if the database could not be found, set the status code to 404.
     // Should a different kind of error occur, return an Internal Server Error (code: 500).
-    match query {
-        Ok(database) => Ok(web::Json(database)),
-        Err(error) => Err(match error {
-            sqlx::Error::RowNotFound => error::ErrorNotFound("database not found!"),
-            _ => error::ErrorInternalServerError(error),
-        }),
-    }
+    let database = query.map_err(|err| match err {
+        sqlx::Error::RowNotFound => error::ErrorNotFound("database not found!"),
+        _ => error::ErrorInternalServerError(err),
+    })?;
+
+    Ok(web::Json(database))
 }
 
 #[rustfmt::skip]
@@ -66,7 +69,7 @@ async fn put_database(pool: web::Data<MySqlPool>, _user: AuthedUser, database: w
     // if not, extract the id from the query.
     let database_id: u64 = selection_query.map_err(error::ErrorInternalServerError)?.get(0);
 
-    // Finally commit the changes to make them permanent
+    // Finally, commit the changes to make them permanent
     tx.commit().await.map_err(error::ErrorInternalServerError)?;
 
     let map: HashMap<&str, u64> = collection! {
@@ -90,15 +93,10 @@ async fn update_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
         .await;
 
     // ...then make sure it didn't fail.
-    let result = match query {
-        Ok(result) => result,
-        Err(error) => {
-            return Err(match error {
-                sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a database with this name!"),
-                _ => error::ErrorInternalServerError(error),
-            })
-        }
-    };
+    let result = query.map_err(|err| match err {
+        sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => error::ErrorConflict("there already is a database with this name!"),
+        _ => error::ErrorInternalServerError(err),
+    })?;
 
     // If nothing was changed, the database didn't even exist!
     if result.rows_affected() == 0 {

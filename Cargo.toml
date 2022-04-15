@@ -2,6 +2,7 @@
 name     = "storagereloaded"
 version  = "1.0.0"
 authors  = ["Sematre <Sematre@gmx.de>"]
+rust-version = "1.58.1"
 edition  = "2021"
 resolver = "2"
 description = "Simple self-hosted/all-in-one storage management system"
