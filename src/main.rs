@@ -61,7 +61,7 @@ async fn run() -> Result<(), String> {
     // Establish MySQL server connection (Pool with 4 connections, Timeout after 5 seconds)
     let pool = MySqlPoolOptions::new()
         .max_connections(4)
-        .connect_timeout(Duration::from_secs(5))
+        .connect_timeout(Duration::from_secs(15))
         .connect(&db_url)
         .await
         .map_err(|err| match err {
