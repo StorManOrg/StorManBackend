@@ -107,7 +107,7 @@ impl FromRequest for AuthedUser {
         };
 
         Box::pin(async move {
-            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id FROM sessions WHERE session_id = ?")
+            let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id, user_id FROM sessions WHERE session_id = ?")
                 .bind(&session_id)
                 .fetch_one(pool.as_ref())
                 .await;

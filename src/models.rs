@@ -12,6 +12,7 @@ pub struct UserCredentials {
 #[derive(Serialize, Deserialize, sqlx::FromRow, Debug)]
 pub struct AuthedUser {
     pub session_id: String,
+    pub user_id: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
