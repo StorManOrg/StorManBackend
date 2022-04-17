@@ -43,6 +43,12 @@ async fn run() -> Result<(), String> {
     let static_dir: String = settings.get_string("static_dir").unwrap_or_else(|_| String::from("./static"));
     let index_file: String = settings.get_string("index_file").unwrap_or_else(|_| String::from("index.html"));
 
+    // Workers
+    let num_workers: usize = settings.get_int("workers").unwrap_or(2).try_into().map_err(|_| "Too many workers!")?;
+    let num_connections: u32 = settings.get_int("pool_connections")
+        .unwrap_or_else(|_| num_workers.try_into().unwrap_or(2))
+        .try_into().map_err(|_| "Too many connections!")?;
+
     // Database config
     let db_type = settings.get_string("db_type").map_err(|_| "DB type is not specified!")?;
     if !db_type.eq_ignore_ascii_case("mysql") {
@@ -56,9 +62,9 @@ async fn run() -> Result<(), String> {
     let db_database = settings.get_string("db_database").map_err(|_| "DB database is not specified!")?;
     let db_url = format!("{db_type}://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}");
 
-    // Establish MySQL server connection (Pool with 4 connections, Timeout after 5 seconds)
+    // Establish MySQL server connection (Timeout after 15 seconds)
     let pool = MySqlPoolOptions::new()
-        .max_connections(4)
+        .max_connections(num_connections)
         .connect_timeout(Duration::from_secs(15))
         .connect(&db_url)
         .await
@@ -167,7 +173,7 @@ async fn run() -> Result<(), String> {
         server.bind((host, port)).map_err(|err| err.to_string())?
     };
 
-    server.run().await.map_err(|err| err.to_string())
+    server.workers(num_workers).run().await.map_err(|err| err.to_string())
 }
 
 #[actix_web::main]
