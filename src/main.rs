@@ -24,15 +24,14 @@ async fn run() -> Result<(), String> {
     // Load user preferences from config file and environment.
     // Environment variables override the config file!
     let settings = config::Config::builder()
-        .add_source(config::File::new("/etc/storagereloaded/config", config::FileFormat::Toml).required(false))
-        .add_source(config::File::new("config", config::FileFormat::Toml).required(false))
+        .add_source(config::File::with_name("/etc/storagereloaded/config").required(false))
+        .add_source(config::File::with_name("config").required(false))
         .add_source(config::Environment::with_prefix("APP"))
         .build().map_err(|err| err.to_string())?;
 
     // Get port and host from config, or use the default port and host: 0.0.0.0:8081
     let host: String = settings.get_string("host").unwrap_or_else(|_| String::from("0.0.0.0"));
-    let port: i64 = settings.get_int("port").unwrap_or(8081);
-    let port: u16 = u16::try_from(port).map_err(|_| "Port number can't be over 65535!")?;
+    let port: u16 = settings.get_int("port").unwrap_or(8081).try_into().map_err(|_| "Port number can't be over 65535!")?;
 
     // SSL config
     let use_ssl = settings.get_bool("ssl").unwrap_or(false);
@@ -51,8 +50,7 @@ async fn run() -> Result<(), String> {
     }
 
     let db_host = settings.get_string("db_host").map_err(|_| "DB host is not specified!")?;
-    let db_port = settings.get_int("db_port").unwrap_or(3306);
-    let db_port: u16 = u16::try_from(db_port).map_err(|_| "DB port number can't be over 65535!")?;
+    let db_port: u16 = settings.get_int("db_port").unwrap_or(3306).try_into().map_err(|_| "DB port number can't be over 65535!")?;
     let db_user = settings.get_string("db_user").map_err(|_| "DB user is not specified!")?;
     let db_password = settings.get_string("db_password").map_err(|_| "DB password is not specified!")?;
     let db_database = settings.get_string("db_database").map_err(|_| "DB database is not specified!")?;
