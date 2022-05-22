@@ -87,26 +87,23 @@ impl FromRequest for AuthedUser {
     // not supported, we need to return a Future.
     // And since Futures cannot be moved in memory
     // we need to pin them.
-    fn from_request(req_local: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
-        let req = req_local.clone();
-
-        // We need to clone the pool here because the sql operation in this function
-        // are async and the compiler can't guarantee us that lifetime of the reference.
-        // This only clones the pointer to the pool and NOT the pool itself.
+    fn from_request(req_ref: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
+        // We need to clone the request here because the sql operation in this function
+        // in async and the compiler can't guarantee us that lifetime of the reference.
+        // This only clones the pointer to the request and NOT the request itself.
+        let req = req_ref.clone();
 
         Box::pin(async move {
-            let session_id = match req.headers().get("X-StoRe-Session") {
-                Some(header) => match header.to_str() {
-                    Ok(session_id) => session_id.to_string(),
-                    Err(_) => return Err(error::ErrorBadRequest("invalid characters in session id!")),
-                },
-                None => return Err(error::ErrorBadRequest("session id is missing!")),
-            };
+            let session_id = req
+                .headers()
+                .get("X-StoRe-Session")
+                .ok_or_else(|| error::ErrorBadRequest("session id is missing!"))?
+                .to_str()
+                .map_err(|_| error::ErrorBadRequest("invalid characters in session id!"))?;
 
-            let pool = match req.app_data::<web::Data<MySqlPool>>() {
-                Some(pool) => pool,
-                None => return Err(error::ErrorInternalServerError("could not clone sqlx pool")),
-            };
+            let pool = req
+                .app_data::<web::Data<MySqlPool>>()
+                .ok_or_else(|| error::ErrorInternalServerError("could not clone sqlx pool"))?;
 
             let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id, user_id FROM sessions WHERE session_id = ?")
                 .bind(&session_id)
