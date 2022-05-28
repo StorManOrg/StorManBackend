@@ -26,9 +26,9 @@ async fn get_system_info() -> actix_web::Result<web::Json<ServerInfo>> {
 
     Ok(web::Json(ServerInfo {
         supported_api_versions: vec![1],
-        server_version: option_env!("CARGO_PKG_VERSION").unwrap_or_else(|| "unknown").to_string(),
-        os: system_info.name().unwrap_or_else(|| "unknown".to_string()),
-        os_version: system_info.os_version().unwrap_or_else(|| "unknown".to_string()),
+        server_version: option_env!("CARGO_PKG_VERSION").unwrap_or_else(|| "unknown").to_owned(),
+        os: system_info.name().unwrap_or_else(|| "unknown".to_owned()),
+        os_version: system_info.os_version().unwrap_or_else(|| "unknown".to_owned()),
     }))
 }
 

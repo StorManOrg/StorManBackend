@@ -52,7 +52,7 @@ async fn run() -> Result<(), String> {
     // Database config
     let db_type = settings.get_string("db_type").map_err(|_| "DB type is not specified!")?;
     if !db_type.eq_ignore_ascii_case("mysql") {
-        return Err("Unsupported database type".to_string());
+        return Err("Unsupported database type!".to_string());
     }
 
     let db_host = settings.get_string("db_host").map_err(|_| "DB host is not specified!")?;
@@ -70,12 +70,12 @@ async fn run() -> Result<(), String> {
         .await
         .map_err(|err| match err {
             sqlx::Error::Tls(msg) if msg.to_string().eq("InvalidDNSNameError") => "Insecure SQL server connection! Domain and specified host don't match!".to_string(),
-            sqlx::Error::Tls(msg) => format!("TLS Error! {}", msg),
+            sqlx::Error::Tls(msg) => format!("TLS Error! {msg}"),
             _ => err.to_string(),
         })?;
 
     // Setup server
-    println!("Starting server on http://{host}:{port}", host = host, port = port);
+    println!("Starting server on {protocol}://{host}:{port}", protocol = if use_ssl {"https"} else {"http"});
     let mut server = HttpServer::new(move || {
         // Create a simple logger that writes all incoming requests to the console
         let logger = Logger::default();
@@ -97,7 +97,7 @@ async fn run() -> Result<(), String> {
 
             // If the user wants to serve static files (in addition to the api),
             // move the api to a sub layer: '/' => '/api'
-            .service(web::scope(if static_serving { "/api" } else { "/" })
+            .service(web::scope(if static_serving {"/api"} else {"/"})
                 //.guard(guard::Header("Content-Type", "application/json"))
                 .default_service(web::route().to(web_handlers::not_implemented))
                 .service(web_handlers::get_system_info)
@@ -139,7 +139,7 @@ async fn run() -> Result<(), String> {
             app = app.service(actix_files::Files::new("/", &static_dir)
                 .prefer_utf8(true)
                 .index_file(index_file.as_str())
-            )
+            );
         };
 
         app
@@ -147,19 +147,21 @@ async fn run() -> Result<(), String> {
 
     // Setup SSL
     server = if use_ssl {
-        let cert_buf = &mut BufReader::new(File::open(cert_file).map_err(|_| "Cannot read cert file!")?);
-        let key_buf = &mut BufReader::new(File::open(key_file).map_err(|_| "Cannot read key file!")?);
+        let cert_open = File::open(cert_file)
+            .map_err(|err| format!("Cannot read cert file! (error: {err})"))?;
+        let key_open = File::open(key_file)
+            .map_err(|err| format!("Cannot read key file! (error: {err})"))?;
 
-        let cert_chain = rustls_pemfile::certs(cert_buf)
-            .map_err(|_| "Cannot parse cert file content!")?
+        let cert_chain = rustls_pemfile::certs(&mut BufReader::new(cert_open))
+            .map_err(|err| format!("Cannot parse cert file content! (error: {err})"))?
             .into_iter().map(rustls::Certificate).collect();
-        let mut keys: Vec<rustls::PrivateKey> = rustls_pemfile::pkcs8_private_keys(key_buf)
-            .map_err(|_| "Cannot parse key file content!")?
+        let mut keys: Vec<rustls::PrivateKey> = rustls_pemfile::pkcs8_private_keys(&mut BufReader::new(key_open))
+            .map_err(|err| format!("Cannot parse key file content! (error: {err})"))?
             .into_iter().map(rustls::PrivateKey).collect();
 
         // Exit if no keys could be parsed
         if keys.is_empty() {
-            return Err("Could not locate PKCS 8 private keys".to_string());
+            return Err("Couldn't locate PKCS 8 private keys!".to_string());
         }
 
         let config = ServerConfig::builder()

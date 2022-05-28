@@ -37,14 +37,14 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
         let session_id: String = rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect();
 
         // Try to insert that into the sessions sql table...
-        let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions VALUES (?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())")
+        let insertion_query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("INSERT INTO sessions VALUES (?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())")
             .bind(&session_id)
             .bind(&user_id)
             .execute(&mut connection)
             .await;
 
         // If the query failed, try it again (but only if the error occurred because of a duplicate).
-        if let Err(error) = query {
+        if let Err(error) = insertion_query {
             match error {
                 sqlx::Error::Database(db_error) if db_error.message().starts_with("Duplicate entry") => continue,
                 _ => return Err(error::ErrorInternalServerError(error)),
