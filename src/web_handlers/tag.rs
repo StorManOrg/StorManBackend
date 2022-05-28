@@ -9,8 +9,10 @@ use crate::web_handlers::get_param;
 
 #[actix_web::get("/tags")]
 async fn get_tags(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Tag>>> {
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     let tags = sqlx::query_as::<_, Tag>("SELECT * FROM tags")
-        .fetch_all(pool.as_ref())
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -20,9 +22,10 @@ async fn get_tags(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::R
 #[actix_web::get("/tag/{tag_id}")]
 async fn get_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Tag>> {
     let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     // Query for the object and auto convert it.
-    let query: Result<Tag, sqlx::Error> = sqlx::query_as::<_, Tag>("SELECT * FROM tags WHERE id = ?").bind(tag_id).fetch_one(pool.as_ref()).await;
+    let query: Result<Tag, sqlx::Error> = sqlx::query_as::<_, Tag>("SELECT * FROM tags WHERE id = ?").bind(tag_id).fetch_one(&mut connection).await;
 
     // Check if the query was successful and return the tag,
     // if the tag could not be found, set the status code to 404.
@@ -83,13 +86,15 @@ async fn update_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequ
         return Err(error::ErrorBadRequest("the tag ids don't match!"));
     }
 
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     // Update the object in the sql table...
     let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("UPDATE tags SET name = ?, color = ?, icon = ? WHERE id = ?")
         .bind(&tag.name)
         .bind(&tag.color)
         .bind(&tag.icon)
         .bind(&tag.id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await;
 
     // ...then make sure it didn't fail.
@@ -109,10 +114,11 @@ async fn update_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequ
 #[actix_web::delete("/tag/{tag_id}")]
 async fn delete_tag(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let tag_id: u64 = get_param(&req, "tag_id", "tag id must be a number!")?;
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     let query: sqlx::mysql::MySqlQueryResult = sqlx::query("DELETE FROM tags WHERE id = ?")
         .bind(&tag_id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 

@@ -62,9 +62,11 @@ async fn get_post_auth(pool: web::Data<MySqlPool>, req: web::Json<UserCredential
 
 #[actix_web::delete("/auth")]
 async fn delete_auth(pool: web::Data<MySqlPool>, session: AuthedUser) -> actix_web::Result<HttpResponse> {
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     let query: sqlx::mysql::MySqlQueryResult = sqlx::query("DELETE FROM sessions WHERE session_id = ?")
         .bind(&session.session_id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -105,9 +107,11 @@ impl FromRequest for AuthedUser {
                 .app_data::<web::Data<MySqlPool>>()
                 .ok_or_else(|| error::ErrorInternalServerError("could not clone sqlx pool"))?;
 
+            let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
             let query: Result<AuthedUser, sqlx::Error> = sqlx::query_as::<_, AuthedUser>("SELECT session_id, user_id FROM sessions WHERE session_id = ?")
                 .bind(&session_id)
-                .fetch_one(pool.as_ref())
+                .fetch_one(&mut connection)
                 .await;
 
             query.map_err(|err| match err {

@@ -9,8 +9,10 @@ use crate::web_handlers::get_param;
 
 #[actix_web::get("/databases")]
 async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Database>>> {
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     let databases = sqlx::query_as::<_, Database>("SELECT * FROM item_databases")
-        .fetch_all(pool.as_ref())
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -20,11 +22,12 @@ async fn get_databases(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_w
 #[actix_web::get("/database/{database_id}")]
 async fn get_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Database>> {
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     // Query for the object and auto convert it.
     let query: Result<Database, sqlx::Error> = sqlx::query_as::<_, Database>("SELECT * FROM item_databases WHERE id = ?")
         .bind(database_id)
-        .fetch_one(pool.as_ref())
+        .fetch_one(&mut connection)
         .await;
 
     // Check if the query was successful and return the database object,
@@ -109,10 +112,11 @@ async fn update_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
 #[actix_web::delete("/database/{database_id}")]
 async fn delete_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let database_id: u64 = get_param(&req, "database_id", "database id must be a number!")?;
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     let query: sqlx::mysql::MySqlQueryResult = sqlx::query("DELETE FROM item_databases WHERE id = ?")
         .bind(&database_id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 

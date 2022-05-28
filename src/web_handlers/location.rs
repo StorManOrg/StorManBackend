@@ -9,8 +9,10 @@ use crate::web_handlers::get_param;
 
 #[actix_web::get("/locations")]
 async fn get_locations(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_web::Result<web::Json<Vec<Location>>> {
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     let locations = sqlx::query_as::<_, Location>("SELECT * FROM locations")
-        .fetch_all(pool.as_ref())
+        .fetch_all(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
@@ -20,11 +22,12 @@ async fn get_locations(pool: web::Data<MySqlPool>, _user: AuthedUser) -> actix_w
 #[actix_web::get("/location/{location_id}")]
 async fn get_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<web::Json<Location>> {
     let location_id: u64 = get_param(&req, "location_id", "location id must be a number!")?;
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     // Query for the object and auto convert it.
     let query: Result<Location, sqlx::Error> = sqlx::query_as::<_, Location>("SELECT * FROM locations WHERE id = ?")
         .bind(location_id)
-        .fetch_one(pool.as_ref())
+        .fetch_one(&mut connection)
         .await;
 
     // Check if the query was successful and return the location,
@@ -88,12 +91,14 @@ async fn update_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
         return Err(error::ErrorBadRequest("the location ids don't match!"));
     }
 
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     // Update the object in the sql table...
     let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("UPDATE locations SET name = ?, database_id = ? WHERE id = ?")
         .bind(&location.name)
         .bind(&location.database)
         .bind(&location.id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await;
 
     // ...then make sure it didn't fail.
@@ -114,10 +119,11 @@ async fn update_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
 #[actix_web::delete("/location/{location_id}")]
 async fn delete_location(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpRequest) -> actix_web::Result<HttpResponse> {
     let location_id: u64 = get_param(&req, "location_id", "location id must be a number!")?;
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
 
     let query: sqlx::mysql::MySqlQueryResult = sqlx::query("DELETE FROM locations WHERE id = ?")
         .bind(&location_id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await
         .map_err(error::ErrorInternalServerError)?;
 
