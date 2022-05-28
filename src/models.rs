@@ -27,8 +27,8 @@ pub struct Item {
     pub properties_internal: Vec<Property>,
     pub properties_custom: Vec<Property>,
     pub attachments: HashMap<String, String>,
-    pub last_edited: u64,
-    pub created: u64,
+    pub last_edited: i64,
+    pub created: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

@@ -160,8 +160,8 @@ async fn put_item(pool: web::Data<MySqlPool>, _user: AuthedUser, item: web::Json
             .bind(&item.image)
             .bind(&item.location)
             .bind(&item.amount)
-            .bind(&chrono::NaiveDateTime::from_timestamp(item.last_edited as i64, 0))
-            .bind(&chrono::NaiveDateTime::from_timestamp(item.created as i64, 0))
+            .bind(&chrono::NaiveDateTime::from_timestamp(item.last_edited, 0))
+            .bind(&chrono::NaiveDateTime::from_timestamp(item.created, 0))
             .execute(&mut tx)
             .await;
 
@@ -281,8 +281,8 @@ async fn update_item(pool: web::Data<MySqlPool>, _user: AuthedUser, req: HttpReq
             .bind(&item.image)
             .bind(&item.location)
             .bind(&item.amount)
-            .bind(&chrono::NaiveDateTime::from_timestamp(item.last_edited as i64, 0))
-            .bind(&chrono::NaiveDateTime::from_timestamp(item.created as i64, 0))
+            .bind(&chrono::NaiveDateTime::from_timestamp(item.last_edited, 0))
+            .bind(&chrono::NaiveDateTime::from_timestamp(item.created, 0))
             .execute(&mut tx)
             .await;
 
@@ -395,8 +395,8 @@ pub(crate) fn sqlrow_to_basic_item(row: &sqlx::mysql::MySqlRow) -> Item {
         image: row.get(3),
         location: row.get(4),
         amount: row.get(5),
-        last_edited: last_edited.timestamp() as u64,
-        created: created.timestamp() as u64,
+        last_edited: last_edited.timestamp(),
+        created: created.timestamp(),
         tags: vec![],
         properties_custom: vec![],
         properties_internal: vec![],
