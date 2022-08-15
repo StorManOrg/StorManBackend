@@ -18,12 +18,12 @@ actix-files    = "0.6"
 futures        = "0.3"
 futures-util   = "0.3"
 rustls         = "0.20"
-rustls-pemfile = "0.3"
-sqlx           = { version = "0.5", features = ["runtime-actix-rustls", "tls", "chrono", "mysql"] }
+rustls-pemfile = "1.0"
+sqlx           = { version = "0.6", features = ["runtime-actix-rustls", "tls", "chrono", "mysql"] }
 serde          = { version = "1.0", features = ["derive"] }
 serde_json     = "1.0"
-sysinfo        = "0.23"
-config         = "0.12"
+sysinfo        = "0.25"
+config         = "0.13"
 rand           = "0.8"
 log            = "0.4"
 env_logger     = "0.9"
