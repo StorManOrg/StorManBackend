@@ -38,6 +38,13 @@ async fn run() -> Result<(), String> {
     let cert_file = settings.get_string("cert_file").unwrap_or_else(|_| "cert.pem".to_owned());
     let key_file = settings.get_string("key_file").unwrap_or_else(|_| "key.pem".to_owned());
 
+    // Domains for CORS
+    let allowed_domains: Vec<String> = settings.get_array("allowed_domains")
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|element| element.into_string().ok())
+        .collect();
+
     // Static serving config
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
     let static_dir: String = settings.get_string("static_dir").unwrap_or_else(|_| "./static".to_owned());
@@ -81,7 +88,14 @@ async fn run() -> Result<(), String> {
         let logger = Logger::default();
 
         // Cross-Origin Requests
-        let cors = actix_cors::Cors::default().allow_any_header().allow_any_origin().allow_any_method().max_age(3600);
+        let mut cors = actix_cors::Cors::default().allow_any_header().allow_any_method().max_age(3600);
+        if allowed_domains.is_empty() {
+            cors = cors.allow_any_origin();
+        } else {
+            for domain in &allowed_domains {
+                cors = cors.allowed_origin(domain);
+            }
+        }
 
         // Create a new App that handles all client requests
         let mut app = App::new()
