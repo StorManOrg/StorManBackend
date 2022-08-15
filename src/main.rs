@@ -30,18 +30,18 @@ async fn run() -> Result<(), String> {
         .build().map_err(|err| err.to_string())?;
 
     // Get port and host from config, or use the default port and host: 0.0.0.0:8081
-    let host: String = settings.get_string("host").unwrap_or_else(|_| String::from("0.0.0.0"));
+    let host: String = settings.get_string("host").unwrap_or_else(|_| "0.0.0.0".to_owned());
     let port: u16 = settings.get_int("port").unwrap_or(8081).try_into().map_err(|_| "Port number can't be over 65535!")?;
 
     // SSL config
     let use_ssl = settings.get_bool("ssl").unwrap_or(false);
-    let cert_file = settings.get_string("cert_file").unwrap_or_else(|_| String::from("cert.pem"));
-    let key_file = settings.get_string("key_file").unwrap_or_else(|_| String::from("key.pem"));
+    let cert_file = settings.get_string("cert_file").unwrap_or_else(|_| "cert.pem".to_owned());
+    let key_file = settings.get_string("key_file").unwrap_or_else(|_| "key.pem".to_owned());
 
     // Static serving config
     let static_serving: bool = settings.get_bool("static_serving").unwrap_or(true);
-    let static_dir: String = settings.get_string("static_dir").unwrap_or_else(|_| String::from("./static"));
-    let index_file: String = settings.get_string("index_file").unwrap_or_else(|_| String::from("index.html"));
+    let static_dir: String = settings.get_string("static_dir").unwrap_or_else(|_| "./static".to_owned());
+    let index_file: String = settings.get_string("index_file").unwrap_or_else(|_| "index.html".to_owned());
 
     // Workers
     let num_workers: usize = settings.get_int("workers").unwrap_or(2).try_into().map_err(|_| "Too many workers!")?;
@@ -52,7 +52,7 @@ async fn run() -> Result<(), String> {
     // Database config
     let db_type = settings.get_string("db_type").map_err(|_| "DB type is not specified!")?;
     if !db_type.eq_ignore_ascii_case("mysql") {
-        return Err("Unsupported database type!".to_string());
+        return Err("Unsupported database type!".to_owned());
     }
 
     let db_host = settings.get_string("db_host").map_err(|_| "DB host is not specified!")?;
@@ -138,7 +138,7 @@ async fn run() -> Result<(), String> {
         if static_serving {
             app = app.service(actix_files::Files::new("/", &static_dir)
                 .prefer_utf8(true)
-                .index_file(index_file.as_str())
+                .index_file(&index_file)
             );
         };
 
@@ -148,12 +148,12 @@ async fn run() -> Result<(), String> {
     // Setup SSL
     server = if use_ssl {
         let cert_open = File::open(cert_file)
-            .map_err(|err| format!("Cannot read cert file! (error: {err})"))?;
+            .map_err(|err| format!("Cannot open certificate file! (error: {err})"))?;
         let key_open = File::open(key_file)
-            .map_err(|err| format!("Cannot read key file! (error: {err})"))?;
+            .map_err(|err| format!("Cannot open key file! (error: {err})"))?;
 
         let cert_chain = rustls_pemfile::certs(&mut BufReader::new(cert_open))
-            .map_err(|err| format!("Cannot parse cert file content! (error: {err})"))?
+            .map_err(|err| format!("Cannot parse certificate file content! (error: {err})"))?
             .into_iter().map(rustls::Certificate).collect();
         let mut keys: Vec<rustls::PrivateKey> = rustls_pemfile::pkcs8_private_keys(&mut BufReader::new(key_open))
             .map_err(|err| format!("Cannot parse key file content! (error: {err})"))?
@@ -161,7 +161,7 @@ async fn run() -> Result<(), String> {
 
         // Exit if no keys could be parsed
         if keys.is_empty() {
-            return Err("Couldn't locate PKCS 8 private keys!".to_string());
+            return Err("Couldn't locate PKCS 8 private keys!".to_owned());
         }
 
         let config = ServerConfig::builder()
@@ -185,7 +185,7 @@ async fn main() {
     std::process::exit(match result {
         Ok(_) => 0,
         Err(error) => {
-            eprintln!("[Error] {}", error);
+            eprintln!("[Error] {error}");
             1
         }
     });

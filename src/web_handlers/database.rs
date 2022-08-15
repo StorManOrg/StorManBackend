@@ -88,11 +88,13 @@ async fn update_database(pool: web::Data<MySqlPool>, _user: AuthedUser, req: Htt
         return Err(error::ErrorBadRequest("the database ids don't match!"));
     }
 
+    let mut connection = pool.acquire().await.map_err(error::ErrorInternalServerError)?;
+
     // Update the object in the sql table...
     let query: Result<sqlx::mysql::MySqlQueryResult, sqlx::Error> = sqlx::query("UPDATE item_databases SET name = ? WHERE id = ?")
         .bind(&database.name)
         .bind(&database.id)
-        .execute(pool.as_ref())
+        .execute(&mut connection)
         .await;
 
     // ...then make sure it didn't fail.
