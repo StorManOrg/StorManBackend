@@ -91,7 +91,7 @@ impl FromRequest for AuthedUser {
     // we need to pin them.
     fn from_request(req_ref: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
         // We need to clone the request here because the sql operation in this function
-        // is async and the compiler can't guarantee us lifetime that lasts long enough.
+        // is async and the compiler can't guarantee us a lifetime that lasts long enough.
         // This only clones the pointer to the request and NOT the request itself.
         let req = req_ref.clone();
 
